@@ -3154,21 +3154,21 @@ namespace SaveOurShip2
 	}
 
 	//comms
-	[HarmonyPatch(typeof(Building_CommsConsole), "GetFailureReason")]
-	public static class NoCommsWhenCloaked
-	{
-		public static void Postfix(Pawn myPawn, ref FloatMenuOption __result)
-		{
-			foreach (Building_ShipCloakingDevice cloak in myPawn.Map.GetComponent<ShipHeatMapComp>().Cloaks)
-			{
-				if (cloak.active && cloak.Map == myPawn.Map)
-				{
-					__result = new FloatMenuOption("CannotUseCloakEnabled".Translate(), null, MenuOptionPriority.Default, null, null, 0f, null, null);
-					break;
-				}
-			}
-		}
-	}
+	//[HarmonyPatch(typeof(Building_CommsConsole), "GetFailureReason")]
+	//public static class NoCommsWhenCloaked
+	//{
+	//	public static void Postfix(Pawn myPawn, ref FloatMenuOption __result)
+	//	{
+	//		foreach (Building_ShipCloakingDevice cloak in myPawn.Map.GetComponent<ShipHeatMapComp>().Cloaks)
+	//		{
+	//			if (cloak.active && cloak.Map == myPawn.Map)
+	//			{
+	//				__result = new FloatMenuOption("CannotUseCloakEnabled".Translate(), null, MenuOptionPriority.Default, null, null, 0f, null, null);
+	//				break;
+	//			}
+	//		}
+	//	}
+	//}
 
 	[HarmonyPatch(typeof(TradeShip), "TryOpenComms")]
 	public static class ReplaceCommsIfPirate
