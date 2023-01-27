@@ -75,7 +75,8 @@ namespace RimWorld.Planet
             {
                 this.target.SetFaction(Faction.OfPlayer);
             }
-            Map orGenerateMap = GetOrGenerateMapUtility.GetOrGenerateMap(this.target.Tile, new IntVec3(250, 1, 250), null);
+            // Map orGenerateMap = GetOrGenerateMapUtility.GetOrGenerateMap(this.target.Tile, new IntVec3(250, 1, 250), null);
+            Map orGenerateMap = GetOrGenerateMapUtility.GetOrGenerateMap(this.target.Tile, new IntVec3(400, 1, 400), null);
             Pawn t = caravan.PawnsListForReading[0];
             CaravanEnterMapUtility.Enter(caravan, orGenerateMap, CaravanEnterMode.Edge, CaravanDropInventoryMode.UnloadIndividually, false, null);
             Find.LetterStack.ReceiveLetter(TranslatorFormattedStringExtensions.Translate("LetterLabelCaravanEnteredMap",this.target), TranslatorFormattedStringExtensions.Translate("LetterCaravanEnteredMap",caravan.Label, this.target).CapitalizeFirst(), LetterDefOf.NeutralEvent, t, null, null);

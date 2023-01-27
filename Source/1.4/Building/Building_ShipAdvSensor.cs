@@ -79,7 +79,8 @@ namespace RimWorld
                 LongEventHandler.QueueLongEvent(delegate
                 {
                     SettleUtility.AddNewHome(target.Tile, Faction.OfPlayer);
-                    this.observedMap = GetOrGenerateMapUtility.GetOrGenerateMap(target.Tile, Find.World.info.initialMapSize, null).Parent;
+                    // this.observedMap = GetOrGenerateMapUtility.GetOrGenerateMap(target.Tile, Find.World.info.initialMapSize, null).Parent;
+                    this.observedMap = GetOrGenerateMapUtility.GetOrGenerateMap(target.Tile, new IntVec3(400, 1, 400), null).Parent;
                     ((Settlement)this.observedMap).Name = "Observed Area "+this.thingIDNumber;
                 }, "Generating map", false, delegate { });
                 return true;
