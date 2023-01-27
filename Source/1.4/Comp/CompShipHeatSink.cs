@@ -113,7 +113,7 @@ namespace RimWorld
         {
             if (!mapComp.InCombat && mapComp.Cloaks.Any(c => c.active))
             {
-                Disabled = true;
+                Disabled = false;
             }
             Disabled = false;
         }
