@@ -11,8 +11,6 @@ using HarmonyLib;
 using System.Text;
 using UnityEngine;
 using Verse.AI.Group;
-using HugsLib;
-using HugsLib.Utils;
 using RimWorld.QuestGen;
 using RimworldMod;
 using System.Net;
@@ -65,8 +63,6 @@ namespace SaveOurShip2
 		// Contains terrain types that are considered a "rock".
 		private static TerrainDef[] rockTerrains;
 
-
-		public static BackstoryDef hologramBackstory;
 		public static List<ThingDef> randomPlants;
 		public static Dictionary<ThingDef, ThingDef> wreckDictionary;
 
@@ -151,30 +147,12 @@ namespace SaveOurShip2
 
 		public static void DefsLoaded()
 		{
-			Log.Message("SOS2EXP V79 active");
+			Log.Message("SOS2EXP V79f4 active");
 			randomPlants = DefDatabase<ThingDef>.AllDefs.Where(t => t.plant != null && !t.defName.Contains("Anima")).ToList();
 
 			foreach (EnemyShipDef ship in DefDatabase<EnemyShipDef>.AllDefs.Where(d => d.saveSysVer < 2 && !d.neverRandom).ToList())
             {
 				Log.Error("SOS2: mod \"" + ship.modContentPack.Name + "\" contains EnemyShipDef: \"" + ship + "\" that can spawn as a random ship but is saved with an old version of CK!");
-			}
-
-			foreach (ThingDef drug in DefDatabase<ThingDef>.AllDefsListForReading)
-			{
-				if (drug.category == ThingCategory.Item && drug.IsDrug && drug.IsPleasureDrug)
-				{
-					CompBuildingConsciousness.drugs.Add(drug);
-				}
-			}
-			CompBuildingConsciousness.drugs.Add(ThingDef.Named("Meat_Human"));
-
-			foreach (ThingDef apparel in DefDatabase<ThingDef>.AllDefsListForReading)
-			{
-				if (apparel.IsApparel && apparel.thingClass != typeof(ApparelHolographic))
-				{
-					if (apparel.apparel.layers.Contains(ApparelLayerDefOf.Overhead) || apparel.apparel.layers.Contains(ApparelLayerDefOf.Shell) || (apparel.apparel.layers.Contains(ApparelLayerDefOf.OnSkin) && (apparel.apparel.bodyPartGroups.Contains(BodyPartGroupDefOf.Torso) || apparel.apparel.bodyPartGroups.Contains(BodyPartGroupDefOf.Legs))))
-						CompBuildingConsciousness.apparel.Add(apparel);
-				}
 			}
 
 			wreckDictionary = new Dictionary<ThingDef, ThingDef>
@@ -1484,7 +1462,7 @@ namespace SaveOurShip2
 			}
 			return cellsFound;
 		}
-
+		
 		public class TimeHelper
 		{
 			private System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
@@ -1512,7 +1490,6 @@ namespace SaveOurShip2
 				return sb.ToString();
 			}
 		}
-
 		public static bool IsRock(TerrainDef def)
 		{
 			return rockTerrains.Contains(def);
@@ -1626,14 +1603,12 @@ namespace SaveOurShip2
 			List<Zone> zonesToCopy = new List<Zone>();
 			List<Room> roomsToTemp = new List<Room>();
 			List<Tuple<IntVec3, float>> posTemp = new List<Tuple<IntVec3, float>>();
-			bool movedZones = false;
 			List<Tuple<IntVec3, TerrainDef>> terrainToCopy = new List<Tuple<IntVec3, TerrainDef>>();
 			List<Tuple<IntVec3, RoofDef>> roofToCopy = new List<Tuple<IntVec3, RoofDef>>();
 			HashSet<IntVec3> targetArea = new HashSet<IntVec3>();
 			// source area of the ship.
 			HashSet<IntVec3> sourceArea = FindAreaAttached(core, includeRock);
 
-			HashSet<IntVec3> unroofTiles = new HashSet<IntVec3>();
 			List<IntVec3> fireExplosions = new List<IntVec3>();
 			List<CompEngineTrail> nukeExplosions = new List<CompEngineTrail>();
 			IntVec3 rot = IntVec3.Zero;
@@ -1677,31 +1652,38 @@ namespace SaveOurShip2
 				}
 				if (!targetMapIsSpace)
 					targetMap.snowGrid.SetDepth(adjustedPos, 0f);
-				//add all things, terrain from area
-				List<Thing> allTheThings = pos.GetThingList(sourceMap);
-				foreach (Thing t in allTheThings)
+				//add all things from area
+				foreach (Thing t in pos.GetThingList(sourceMap))
 				{
-					if (t is Building_ShipAirlock a && a.docked)
-					{
-						a.UnDock();
+					if (t is Building b)
+                    {
+						if (b is Building_SteamGeyser)
+							continue;
+						if (b is Building_ShipAirlock a && a.docked)
+						{
+							a.UnDock();
+						}
+						var engineComp = b.TryGetComp<CompEngineTrail>();
+						var powerComp = b.TryGetComp<CompPower>();
+						if (engineComp != null)
+							engineComp.Off();
+						if (powerComp != null)
+							toRePower.Add(powerComp);
 					}
-					if (t.Map.zoneManager.ZoneAt(t.Position) != null && !zonesToCopy.Contains(t.Map.zoneManager.ZoneAt(t.Position)))
-					{
-						zonesToCopy.Add(t.Map.zoneManager.ZoneAt(t.Position));
-					}
-					var engineComp = t.TryGetComp<CompEngineTrail>();
-					var powerComp = t.TryGetComp<CompPower>();
-					if (engineComp != null)
-						engineComp.Off();
-					if (powerComp != null)
-						toRePower.Add(powerComp);
-					if (!toSave.Contains(t) && !(t is Building_SteamGeyser))
+					else if (t is Pawn p && !sourceMapIsSpace && p.Faction != Faction.OfPlayer)
+                    {
+						Messages.Message(TranslatorFormattedStringExtensions.Translate("ShipMoveFailPawns"), null, MessageTypeDefOf.NegativeEvent);
+						return;
+                    }
+					if (!toSave.Contains(t))
 					{
 						toSave.Add(t);
 					}
+				}
 
-					foreach (IntVec3 thingPos in GenAdj.CellsOccupiedBy(t))
-						unroofTiles.Add(thingPos);
+				if (sourceMap.zoneManager.ZoneAt(pos) != null && !zonesToCopy.Contains(sourceMap.zoneManager.ZoneAt(pos)))
+				{
+					zonesToCopy.Add(sourceMap.zoneManager.ZoneAt(pos));
 				}
 
 				var sourceTerrain = sourceMap.terrainGrid.TerrainAt(pos);
@@ -1721,6 +1703,7 @@ namespace SaveOurShip2
 				{
 					roofToCopy.Add(new Tuple<IntVec3, RoofDef>(pos, sourceRoof));
 				}
+				sourceMap.roofGrid.SetRoof(pos, null);
 				if (playerMove)
 				{
 					sourceMap.areaManager.Home[pos] = false;
@@ -1729,11 +1712,6 @@ namespace SaveOurShip2
 			}
 			if (devMode)
 				watch.Record("processSourceArea");
-
-			foreach (IntVec3 pos in unroofTiles)
-			{
-				sourceMap.roofGrid.SetRoof(pos, null);
-			}
 
 			//move live pawns out of target area, destroy non buildings
 			foreach (Thing thing in toDestroy)
@@ -1800,8 +1778,9 @@ namespace SaveOurShip2
 					watch.Record("takeoffEngineEffects");
 
 			}
-			AirlockBugFlag = true;
+
 			//move things
+			AirlockBugFlag = true;
 			foreach (Thing spawnThing in toSave)
 			{
 				if (!spawnThing.Destroyed)
@@ -1880,20 +1859,59 @@ namespace SaveOurShip2
 			}
 			if (devMode)
 				watch.Record("moveThings");
-
 			AirlockBugFlag = false;
-			if (zonesToCopy.Count != 0)
-				movedZones = true;
+
 			//move zones
-			foreach (Zone theZone in zonesToCopy)
+			if (zonesToCopy.Any())
 			{
-				sourceMap.zoneManager.DeregisterZone(theZone);
-				theZone.zoneManager = targetMap.zoneManager;
-				List<IntVec3> newCells = new List<IntVec3>();
-				foreach (IntVec3 cell in theZone.cells)
-					newCells.Add(Transform(cell));
-				theZone.cells = newCells;
-				targetMap.zoneManager.RegisterZone(theZone);
+				foreach (Zone zone in zonesToCopy) //only move fully contained zones
+				{
+					bool allOn = true;
+					foreach (IntVec3 v in zone.Cells)
+					{
+						if (!sourceArea.Contains(v))
+						{
+							allOn = false;
+							break;
+						}
+					}
+					if (allOn)
+					{
+						sourceMap.zoneManager.DeregisterZone(zone);
+						zone.zoneManager = targetMap.zoneManager;
+						List<IntVec3> newCells = new List<IntVec3>();
+						foreach (IntVec3 cell in zone.cells)
+							newCells.Add(Transform(cell));
+						zone.cells = newCells;
+						targetMap.zoneManager.RegisterZone(zone);
+					}
+				}
+				typeof(ZoneManager).GetMethod("RebuildZoneGrid", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(targetMap.zoneManager, new object[0]);
+				typeof(ZoneManager).GetMethod("RebuildZoneGrid", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(sourceMap.zoneManager, new object[0]);
+
+				//regen affected map layers
+				List<Section> sourceSec = new List<Section>();
+				foreach (IntVec3 pos in sourceArea)
+				{
+					var sec = sourceMap.mapDrawer.SectionAt(pos);
+					if (!sourceSec.Contains(sec))
+						sourceSec.Add(sec);
+				}
+				foreach (Section sec in sourceSec)
+				{
+					sec.RegenerateLayers(MapMeshFlag.Zone);
+				}
+				List<Section> targetSec = new List<Section>();
+				foreach (IntVec3 pos in targetArea)
+				{
+					var sec = targetMap.mapDrawer.SectionAt(pos);
+					if (!targetSec.Contains(sec))
+						targetSec.Add(sec);
+				}
+				foreach (Section sec in targetSec)
+				{
+					sec.RegenerateLayers(MapMeshFlag.Zone);
+				}
 			}
 			if (devMode)
 				watch.Record("moveZones");
@@ -1908,7 +1926,6 @@ namespace SaveOurShip2
 					targetMap.terrainGrid.SetTerrain(targetPos, tup.Item2);
 				}
 			}
-
 			if (includeRock)
 			{
 				foreach (IntVec3 pos in sourceArea)
@@ -1919,7 +1936,7 @@ namespace SaveOurShip2
 			if (devMode)
 				watch.Record("moveTerrain");
 
-			// Move roofs.
+			//move roofs
 			foreach (Tuple<IntVec3, RoofDef> tup in roofToCopy)
 			{
 				var targetPos = Transform(tup.Item1);
@@ -1928,28 +1945,31 @@ namespace SaveOurShip2
 			if (devMode)
 				watch.Record("moveRoof");
 
-			typeof(ZoneManager).GetMethod("RebuildZoneGrid", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(targetMap.zoneManager, new object[0]);
-			typeof(ZoneManager).GetMethod("RebuildZoneGrid", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(sourceMap.zoneManager, new object[0]);
 			//restore temp in ship
 			foreach (Tuple<IntVec3, float> t in posTemp)
 			{
 				Room room = t.Item1.GetRoom(targetMap);
 				room.Temperature = t.Item2;
 			}
+
+			//landing - remove space map
 			if (sourceMap != targetMap && !sourceMap.spawnedThings.Any((Thing x) => x is Pawn && !x.Destroyed))
 			{
-				//landing - remove space map
 				WorldObject oldParent = sourceMap.Parent;
 				Current.Game.DeinitAndRemoveMap(sourceMap);
 				Find.World.worldObjects.Remove(oldParent);
 			}
-			if (!sourceMapIsSpace) //takeoff - explosions
+
+			//takeoff - explosions
+			if (!sourceMapIsSpace)
 			{
 				foreach (IntVec3 pos in fireExplosions)
 				{
 					GenExplosion.DoExplosion(pos, sourceMap, 3.9f, DamageDefOf.Flame, null);
 				}
 			}
+
+			//power
 			if (sourceMap != targetMap)
 			{
 				foreach (CompPower powerComp in toRePower)
@@ -1957,50 +1977,18 @@ namespace SaveOurShip2
 					powerComp.ResetPowerVars();
 				}
 			}
-			// Power consumers become upnowered without this update.
-			if (toRePower.Count > 0)
+			if (toRePower.Any())
 				targetMap.powerNetManager.UpdatePowerNetsAndConnections_First();
 
-			//regen affected map layers
-			List<Section> sourceSec = new List<Section>();
-			foreach (IntVec3 pos in sourceArea)
-			{
-				if (movedZones)
-				{
-					var sec = sourceMap.mapDrawer.SectionAt(pos);
-					if (!sourceSec.Contains(sec))
-						sourceSec.Add(sec);
-				}
-			}
-			foreach (Section sec in sourceSec)
-			{
-				if (movedZones)
-				{
-					sec.RegenerateLayers(MapMeshFlag.Zone);
-				}
-			}
-			if (movedZones)
-			{
-				List<Section> targetSec = new List<Section>();
-				foreach (IntVec3 pos in targetArea)
-				{
-					var sec = targetMap.mapDrawer.SectionAt(pos);
-					if (!targetSec.Contains(sec))
-						targetSec.Add(sec);
-				}
-				foreach (Section sec in targetSec)
-				{
-					sec.RegenerateLayers(MapMeshFlag.Zone);
-				}
-			}
+			//heat
 			targetMap.GetComponent<ShipHeatMapComp>().heatGridDirty = true;
+
 			if (devMode)
 			{
 				watch.Record("finalize");
 				Log.Message("Timing report:\n" + watch.MakeReport());
 				Log.Message("Moved ship with building " + core);
 			}
-
 			/*Things = 1,
 			FogOfWar = 2,
 			Buildings = 4,
@@ -2042,7 +2030,253 @@ namespace SaveOurShip2
 				}
 			}*/
 		}
-		
+		public static void SaveShip(Building core, string file)
+		{
+			List<Thing> toSave = new List<Thing>();
+			List<Zone> zones = new List<Zone>();
+			HashSet<IntVec3> area = FindAreaAttached(core, false);
+
+			HashSet<Ideo> ideosAboardShip = new HashSet<Ideo>();
+			HashSet<CustomXenotype> xenosAboardShip = new HashSet<CustomXenotype>();
+			HashSet<Pawn> pawnsAboardShip = new HashSet<Pawn>();
+			List<IntVec3> roofPos = new List<IntVec3>();
+			List<RoofDef> roofDefs = new List<RoofDef>();
+			List<IntVec3> terrainPos = new List<IntVec3>();
+			List<TerrainDef> terrainDefs = new List<TerrainDef>();
+			Map map = core.Map;
+
+			foreach (IntVec3 pos in area)
+			{
+				//add all things, terrain from area
+				List<Thing> allTheThings = pos.GetThingList(map);
+				foreach (Thing t in allTheThings)
+				{
+					if (t is Building b)
+					{
+						if (b is Building_CryptosleepCasket cc && cc.HasAnyContents)
+						{
+							if (cc.ContainedThing is Pawn p)
+								pawnsAboardShip.Add(p);
+						}
+						else if (t is Building_ShipAirlock a && a.docked)
+						{
+							a.UnDock();
+						}
+						var engineComp = t.TryGetComp<CompEngineTrail>();
+						if (engineComp != null)
+							engineComp.Off();
+					}
+					else if (t is Pawn p)
+                    {
+						if (p.jobs != null)
+						{
+							p.jobs.ClearQueuedJobs();
+							p.jobs.EndCurrentJob(JobCondition.Incompletable);
+						}
+					}
+					if (t.Map.zoneManager.ZoneAt(t.Position) != null && !zones.Contains(t.Map.zoneManager.ZoneAt(t.Position)))
+					{
+						zones.Add(t.Map.zoneManager.ZoneAt(t.Position));
+					}
+					if (!toSave.Contains(t))
+					{
+						toSave.Add(t);
+					}
+				}
+
+				var sourceTerrain = map.terrainGrid.TerrainAt(pos);
+				if (sourceTerrain.layerable && !IsHull(sourceTerrain))
+				{
+					terrainPos.Add(pos);
+					terrainDefs.Add(sourceTerrain);
+					map.terrainGrid.RemoveTopLayer(pos, false);
+				}
+
+				var sourceRoof = map.roofGrid.RoofAt(pos);
+				if (IsRoofDefAirtight(sourceRoof))
+				{
+					roofPos.Add(pos);
+					roofDefs.Add(sourceRoof);
+				}
+				map.areaManager.Home[pos] = false;
+			}
+
+			//remove non fully contained zones
+			List<Zone> dirtyZones = new List<Zone>();
+			foreach (Zone zone in zones)
+			{
+				foreach (IntVec3 v in zone.Cells)
+				{
+					if (!area.Contains(v))
+					{
+						if (!dirtyZones.Contains(zone))
+							dirtyZones.Add(zone);
+						break;
+					}
+				}
+			}
+			foreach (Zone zone in dirtyZones)
+			{
+				zones.Remove(zone);
+			}
+
+			StringBuilder stringBuilder = new StringBuilder();
+			foreach (Pawn pawn in pawnsAboardShip)
+			{
+				stringBuilder.AppendLine("   " + pawn.LabelCap);
+				Find.StoryWatcher.statsRecord.colonistsLaunched++;
+				TaleRecorder.RecordTale(TaleDefOf.LaunchedShip, new object[] { pawn });
+
+				if (pawn.Ideo != null && pawn.Ideo != Faction.OfPlayer.ideos.PrimaryIdeo)
+					ideosAboardShip.Add(pawn.Ideo);
+				if (pawn.genes.CustomXenotype != null)
+					xenosAboardShip.Add(pawn.genes.CustomXenotype);
+
+				List<DirectPawnRelation> toPrune = new List<DirectPawnRelation>();
+				foreach (DirectPawnRelation relation in pawn.relations.DirectRelations)
+				{
+					if (!pawnsAboardShip.Contains(relation.otherPawn))
+						toPrune.Add(relation);
+				}
+				foreach (DirectPawnRelation relation in toPrune)
+					pawn.relations.RemoveDirectRelation(relation);
+			}
+
+			List<GameComponent> components = new List<GameComponent>();
+			foreach (GameComponent comp in Current.Game.components)
+			{
+				//Don't copy ours or vanilla components. We'll probably need a more general-purpose way to add more exceptions if other mods' components shouldn't be moved.
+				if (!(comp is EnvironmentCachingUtility || comp is GameComponent_Bossgroup || comp is GameComponent_DebugTools || comp is GameComponent_OnetimeNotification))
+					components.Add(comp);
+			}
+
+			string playerFactionName = Faction.OfPlayer.Name;
+			Ideo playerFactionIdeo = Faction.OfPlayer.ideos.PrimaryIdeo;
+
+			SafeSaver.Save(file, "SoS2Ship", (Action)(() =>
+			{
+				ScribeMetaHeaderUtility.WriteMetaHeader();
+
+				Scribe_Defs.Look<FactionDef>(ref Faction.OfPlayer.def, "playerFactionDef");
+				Scribe_Values.Look(ref playerFactionName, "playerFactionName");
+				//typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, true);
+				Scribe_Deep.Look(ref playerFactionIdeo, "playerFactionIdeo");
+				//typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, false);
+
+				Scribe_Deep.Look<TickManager>(ref Current.Game.tickManager, true, "tickManager");
+				Scribe_Deep.Look<PlaySettings>(ref Current.Game.playSettings, true, "playSettings");
+				Scribe_Deep.Look<StoryWatcher>(ref Current.Game.storyWatcher, true, "storyWatcher");
+				Scribe_Deep.Look<ResearchManager>(ref Current.Game.researchManager, true, "researchManager");
+				Scribe_Deep.Look<TaleManager>(ref Current.Game.taleManager, true, "taleManager");
+				Scribe_Deep.Look<PlayLog>(ref Current.Game.playLog, true, "playLog");
+				Scribe_Deep.Look<OutfitDatabase>(ref Current.Game.outfitDatabase, true, "outfitDatabase");
+				Scribe_Deep.Look<DrugPolicyDatabase>(ref Current.Game.drugPolicyDatabase, true, "drugPolicyDatabase");
+				Scribe_Deep.Look<FoodRestrictionDatabase>(ref Current.Game.foodRestrictionDatabase, true, "foodRestrictionDatabase");
+				Scribe_Deep.Look<UniqueIDsManager>(ref Current.Game.uniqueIDsManager, true, "uniqueIDsManager");
+
+				//typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, true);
+				Scribe_Collections.Look<Ideo>(ref ideosAboardShip, "ideos", LookMode.Deep);
+				//typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, false);
+				Scribe_Collections.Look<CustomXenotype>(ref xenosAboardShip, "xenotypes", LookMode.Deep);
+				Scribe_Deep.Look<CustomXenogermDatabase>(ref Current.Game.customXenogermDatabase, true, "customXenogermDatabase");
+				Scribe_Collections.Look<GameComponent>(ref components, "components", LookMode.Deep);
+
+				Scribe_Collections.Look<Thing>(ref toSave, "shipThings", LookMode.Deep);
+				Scribe_Collections.Look<Zone>(ref zones, "shipZones", LookMode.Deep);
+				Scribe_Collections.Look<IntVec3>(ref terrainPos, "terrainPos");
+				Scribe_Collections.Look<TerrainDef>(ref terrainDefs, "terrainDefs");
+				Scribe_Collections.Look<IntVec3>(ref roofPos, "roofPos");
+				Scribe_Collections.Look<RoofDef>(ref roofDefs, "roofDefs");
+			}));
+
+			Log.Message("Saved ship with building " + core);
+
+			GameVictoryUtility.ShowCredits(GameVictoryUtility.MakeEndCredits("GameOverShipPlanetLeaveIntro".Translate(), "GameOverShipPlanetLeaveEnding".Translate(), stringBuilder.ToString(), "GameOverColonistsEscaped", null), null, false, 5f);
+
+			RemoveShip(area.ToList(), map, true);
+		}
+		public static void RemoveShip(List<IntVec3> area, Map map, bool planetTravel)
+		{
+			AirlockBugFlag = true;
+			List<Thing> things = new List<Thing>();
+			List<Zone> zones = new List<Zone>();
+			foreach (IntVec3 pos in area)
+			{
+				map.roofGrid.SetRoof(pos, null);
+				things.AddRange(pos.GetThingList(map));
+				if (map.zoneManager.ZoneAt(pos) != null && !zones.Contains(map.zoneManager.ZoneAt(pos)))
+				{
+					zones.Add(map.zoneManager.ZoneAt(pos));
+				}
+			}
+			foreach (Thing t in things)
+			{
+				try
+				{
+					if (!planetTravel && t is Pawn)
+						t.Kill();
+					if (t.def.destroyable && !t.Destroyed)
+					{
+						CompRefuelable refuelable = t.TryGetComp<CompRefuelable>();
+						if (refuelable != null)
+							refuelable.ConsumeFuel(refuelable.Fuel); //To avoid CompRefuelable.PostDestroy
+						t.Destroy(DestroyMode.Vanish);
+					}
+				}
+				catch (Exception e)
+				{
+					Log.Warning("" + e);
+				}
+			}
+			foreach (IntVec3 pos in area)
+			{
+				map.terrainGrid.SetTerrain(pos, ResourceBank.TerrainDefOf.EmptySpace);
+			}
+			AirlockBugFlag = false;
+
+			//regen affected map layers
+			List<Section> sourceSec = new List<Section>();
+			if (zones.Any())
+			{
+				foreach (Zone zone in zones) //only remove fully contained zones
+				{
+					bool allOn = true;
+					foreach (IntVec3 v in zone.Cells)
+                    {
+						if (!area.Contains(v))
+                        {
+							allOn = false;
+							break;
+						}
+                    }
+					if (allOn)
+						map.zoneManager.DeregisterZone(zone);
+				}
+				typeof(ZoneManager).GetMethod("RebuildZoneGrid", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(map.zoneManager, new object[0]);
+				foreach (IntVec3 pos in map)
+				{
+					var sec = map.mapDrawer.SectionAt(pos);
+					if (!sourceSec.Contains(sec))
+						sourceSec.Add(sec);
+				}
+				foreach (Section sec in sourceSec)
+				{
+					sec.RegenerateLayers(MapMeshFlag.Zone);
+				}
+				List<Section> targetSec = new List<Section>();
+				foreach (IntVec3 pos in area)
+				{
+					var sec = map.mapDrawer.SectionAt(pos);
+					if (!targetSec.Contains(sec))
+						targetSec.Add(sec);
+				}
+				foreach (Section sec in targetSec)
+				{
+					sec.RegenerateLayers(MapMeshFlag.Zone);
+				}
+			}
+			map.GetComponent<ShipHeatMapComp>().heatGridDirty = true;
+		}
 		public static bool IsHologram(Pawn pawn)
 		{
 			return pawn.health.hediffSet.GetFirstHediff<HediffPawnIsHologram>() != null;
@@ -2115,6 +2349,11 @@ namespace SaveOurShip2
 			if (hasLung)
 				return 1;
 			return 0;
+		}
+
+		public static bool CompatibleWithShipLoad(ScenPart item)
+		{
+			return !(item is ScenPart_PlayerFaction || item is ScenPart_PlayerPawnsArriveMethod || item is ScenPart_ScatterThings || item is ScenPart_Naked || item is ScenPart_NoPossessions || item is ScenPart_GameStartDialog || item is ScenPart_AfterlifeVault || item is ScenPart_SetNeedLevel || item is ScenPart_StartingAnimal || item is ScenPart_StartingMech || item is ScenPart_StartingResearch || item is ScenPart_StartingThing_Defined || item is ScenPart_StartInSpace || item is ScenPart_ThingCount || item is ScenPart_ConfigPage_ConfigureStartingPawnsBase);
 		}
 	}
 	//harmony patches
@@ -2767,8 +3006,34 @@ namespace SaveOurShip2
 		}
 	}
 
-   //map
-   [HarmonyPatch(typeof(CompShipPart), "CompGetGizmosExtra")]
+	[HarmonyPatch(typeof(WeatherManager), "TransitionTo")]
+	public static class SpaceWeatherStays
+	{
+		public static bool Prefix(WeatherManager __instance)
+		{
+			if (__instance.map.IsSpace() && __instance.curWeather == ResourceBank.WeatherDefOf.OuterSpaceWeather)
+			{
+				return false;
+			}
+			return true;
+		}
+	}
+
+	[HarmonyPatch(typeof(WeatherDecider), "StartNextWeather")]
+	public static class SpaceWeatherStaysTwo
+	{
+		public static bool Prefix(WeatherManager __instance)
+		{
+			if (__instance.map.IsSpace() && __instance.curWeather == ResourceBank.WeatherDefOf.OuterSpaceWeather)
+			{
+				return false;
+			}
+			return true;
+		}
+	}
+
+	//map
+	[HarmonyPatch(typeof(CompShipPart), "CompGetGizmosExtra")]
 	public static class NoGizmoInSpace
 	{
 		[HarmonyPrefix]
@@ -3154,21 +3419,21 @@ namespace SaveOurShip2
 	}
 
 	//comms
-	//[HarmonyPatch(typeof(Building_CommsConsole), "GetFailureReason")]
-	//public static class NoCommsWhenCloaked
-	//{
-	//	public static void Postfix(Pawn myPawn, ref FloatMenuOption __result)
-	//	{
-	//		foreach (Building_ShipCloakingDevice cloak in myPawn.Map.GetComponent<ShipHeatMapComp>().Cloaks)
-	//		{
-	//			if (cloak.active && cloak.Map == myPawn.Map)
-	//			{
-	//				__result = new FloatMenuOption("CannotUseCloakEnabled".Translate(), null, MenuOptionPriority.Default, null, null, 0f, null, null);
-	//				break;
-	//			}
-	//		}
-	//	}
-	//}
+	[HarmonyPatch(typeof(Building_CommsConsole), "GetFailureReason")]
+	public static class NoCommsWhenCloaked
+	{
+		public static void Postfix(Pawn myPawn, ref FloatMenuOption __result)
+		{
+			foreach (Building_ShipCloakingDevice cloak in myPawn.Map.GetComponent<ShipHeatMapComp>().Cloaks)
+			{
+				if (cloak.active && cloak.Map == myPawn.Map)
+				{
+					__result = new FloatMenuOption("CannotUseCloakEnabled".Translate(), null, MenuOptionPriority.Default, null, null, 0f, null, null);
+					break;
+				}
+			}
+		}
+	}
 
 	[HarmonyPatch(typeof(TradeShip), "TryOpenComms")]
 	public static class ReplaceCommsIfPirate
@@ -3415,12 +3680,11 @@ namespace SaveOurShip2
 				orbiter.SetFaction(Faction.OfPlayer);
 				orbiter.Tile = ShipInteriorMod2.FindWorldTile();
 				Find.WorldObjects.Add(orbiter);
-				// Map myMap = MapGenerator.GenerateMap(ShipInteriorMod2.shipOriginRoot.Map.Size, orbiter, orbiter.MapGeneratorDef);
-				Map myMap = MapGenerator.GenerateMap(new IntVec3(400, 1, 400), orbiter, orbiter.MapGeneratorDef);
+				Map myMap = MapGenerator.GenerateMap(ShipInteriorMod2.shipOriginRoot.Map.Size, orbiter, orbiter.MapGeneratorDef);
 				myMap.fogGrid.ClearAllFog();
 
 				ShipInteriorMod2.MoveShip(ShipInteriorMod2.shipOriginRoot, myMap, IntVec3.Zero);
-				myMap.weatherManager.TransitionTo(DefDatabase<WeatherDef>.GetNamed("OuterSpaceWeather"));
+				myMap.weatherManager.TransitionTo(ResourceBank.WeatherDefOf.OuterSpaceWeather);
 				Find.LetterStack.ReceiveLetter(TranslatorFormattedStringExtensions.Translate("LetterLabelOrbitAchieved"),
 					TranslatorFormattedStringExtensions.Translate("LetterOrbitAchieved"), LetterDefOf.PositiveEvent);
 				ShipInteriorMod2.shipOriginRoot = null;
@@ -4381,531 +4645,56 @@ namespace SaveOurShip2
 		}
 	}
 
-    [HarmonyPatch(typeof(RCellFinder), "CanSelfShutdown")]
-    public static class AllowMechSleepShipFloor
-    {
-        public static bool Prefix(ref bool __result, Pawn pawn, IntVec3 c, Map map, bool allowForbidden)
-        {
-            if (c.GetFirstBuilding(map) != null && (c.GetFirstBuilding(map).TryGetComp<CompSoShipPart>()?.Props.isPlating ?? false))
-            {
-                //check all except building
-                __result = true;
-                if (!pawn.CanReserve(c, 1, -1, null, false))
-                {
-                    __result = false;
-                    return false;
-                }
-                if (!pawn.CanReach(c, PathEndMode.OnCell, Danger.Some, false, false, TraverseMode.ByPawn))
-                {
-                    __result = false;
-                    return false;
-                }
-                if (!c.Standable(map))
-                {
-                    __result = false;
-                    return false;
-                }
-                if (!allowForbidden && c.IsForbidden(pawn))
-                {
-                    __result = false;
-                    return false;
-                }
-                Room room = c.GetRoom(map);
-                if (room != null && room.IsPrisonCell)
-                {
-                    __result = false;
-                    return false;
-                }
-                for (int i = 0; i < GenAdj.CardinalDirections.Length; i++)
-                {
-                    List<Thing> thingList = (c + GenAdj.CardinalDirections[i]).GetThingList(map);
-                    for (int j = 0; j < thingList.Count; j++)
-                    {
-                        if (thingList[j].def.hasInteractionCell && thingList[j].InteractionCell == c)
-                        {
-                            __result = false;
-                            return false;
-                        }
-                    }
-                }
-                return false;
-            }
-            return true;
-        }
-    }
-
-    //world&fac gen
-    [HarmonyPatch(typeof(Scenario), "PostWorldGenerate")]
-	public static class SelectiveWorldGeneration
+	[HarmonyPatch(typeof(RCellFinder), "CanSelfShutdown")]
+	public static class AllowMechSleepShipFloor
 	{
-		[HarmonyPrefix]
-		public static bool Replace(Scenario __instance)
+		public static bool Prefix(ref bool __result, Pawn pawn, IntVec3 c, Map map, bool allowForbidden)
 		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
+			if (c.GetFirstBuilding(map) != null && (c.GetFirstBuilding(map).TryGetComp<CompSoShipPart>()?.Props.isPlating ?? false))
 			{
-				Current.ProgramState = ProgramState.MapInitializing;
-				//FactionGenerator.EnsureRequiredEnemies(Find.GameInitData.playerFaction); TODO possibly need to replace for 1.3
-				Current.ProgramState = ProgramState.Playing;
-
-				WorldSwitchUtility.SoonToBeObsoleteWorld.worldPawns = null;
-				WorldSwitchUtility.SoonToBeObsoleteWorld.factionManager = null;
-				WorldComponent obToRemove = null;
-				List<UtilityWorldObject> uwos = new List<UtilityWorldObject>();
-				foreach (WorldObject ob in WorldSwitchUtility.SoonToBeObsoleteWorld.worldObjects.AllWorldObjects)
+				//check all except building
+				__result = true;
+				if (!pawn.CanReserve(c, 1, -1, null, false))
 				{
-					if (ob is UtilityWorldObject && !(ob is PastWorldUWO))
-						uwos.Add((UtilityWorldObject)ob);
+					__result = false;
+					return false;
 				}
-
-				foreach (WorldComponent comp in WorldSwitchUtility.SoonToBeObsoleteWorld.components)
+				if (!pawn.CanReach(c, PathEndMode.OnCell, Danger.Some, false, false, TraverseMode.ByPawn))
 				{
-					if (comp is PastWorldUWO2)
-						obToRemove = comp;
+					__result = false;
+					return false;
 				}
-
-				WorldSwitchUtility.SoonToBeObsoleteWorld.components.Remove(obToRemove);
-				foreach (UtilityWorldObject uwo in uwos)
+				if (!c.Standable(map))
 				{
-					((List<WorldObject>)typeof(WorldObjectsHolder)
-						.GetField("worldObjects", BindingFlags.Instance | BindingFlags.NonPublic)
-						.GetValue(WorldSwitchUtility.SoonToBeObsoleteWorld.worldObjects)).Remove(uwo);
-					typeof(WorldObjectsHolder)
-						.GetMethod("RemoveFromCache", BindingFlags.Instance | BindingFlags.NonPublic)
-						.Invoke(WorldSwitchUtility.SoonToBeObsoleteWorld.worldObjects, new object[] { uwo });
-
+					__result = false;
+					return false;
 				}
-
-				List<WorldComponent> modComps = new List<WorldComponent>();
-				foreach (WorldComponent comp in WorldSwitchUtility.SoonToBeObsoleteWorld.components)
+				if (!allowForbidden && c.IsForbidden(pawn))
 				{
-					if (!(comp is TileTemperaturesComp) && !(comp is WorldGenData) && !(comp is PastWorldUWO2))
-						modComps.Add(comp);
+					__result = false;
+					return false;
 				}
-
-				foreach (WorldComponent comp in modComps)
-					WorldSwitchUtility.SoonToBeObsoleteWorld.components.Remove(comp);
-
-				if (!WorldSwitchUtility.planetkiller)
-					WorldSwitchUtility.PastWorldTracker.PastWorlds.Add(
-						WorldSwitchUtility.PreviousWorldFromWorld(WorldSwitchUtility.SoonToBeObsoleteWorld));
-				else
-					WorldSwitchUtility.planetkiller = false;
-
-				Find.World.components.Remove(Find.World.components.Where(c => c is PastWorldUWO2).FirstOrDefault());
-				Find.World.components.Add(WorldSwitchUtility.PastWorldTracker);
-				foreach (UtilityWorldObject uwo in uwos)
+				Room room = c.GetRoom(map);
+				if (room != null && room.IsPrisonCell)
 				{
-					Find.WorldObjects.Add(uwo);
+					__result = false;
+					return false;
 				}
-
-				WorldComponent toReplace;
-				foreach (WorldComponent comp in modComps)
+				for (int i = 0; i < GenAdj.CardinalDirections.Length; i++)
 				{
-					toReplace = null;
-					foreach (WorldComponent otherComp in Find.World.components)
+					List<Thing> thingList = (c + GenAdj.CardinalDirections[i]).GetThingList(map);
+					for (int j = 0; j < thingList.Count; j++)
 					{
-						if (otherComp.GetType() == comp.GetType())
-							toReplace = otherComp;
-					}
-
-					if (toReplace != null)
-						Find.World.components.Remove(toReplace);
-					Find.World.components.Add(comp);
-				}
-
-				if (!ModsConfig.IdeologyActive)
-					WorldSwitchUtility.SelectiveWorldGenFlag = false;
-				WorldSwitchUtility.CacheFactions(Current.CreatingWorld.info.name);
-				WorldSwitchUtility.RespawnShip();
-
-				ShipInteriorMod2.renderedThatAlready = false;
-
-				//Prevent forced events from firing during the intervening years
-				foreach (ScenPart part in Find.Scenario.AllParts)
-				{
-					if (part.def.defName.Equals("CreateIncident"))
-					{
-						Type createIncident = typeof(ScenPart).Assembly.GetType("RimWorld.ScenPart_CreateIncident");
-						createIncident.GetField("occurTick", BindingFlags.Instance | BindingFlags.NonPublic)
-							.SetValue(part,
-								(float)createIncident
-									.GetProperty("IntervalTicks", BindingFlags.Instance | BindingFlags.NonPublic)
-									.GetValue(part, null) + Current.Game.tickManager.TicksAbs);
-					}
-				}
-
-				return false;
-			}
-
-			return true;
-		}
-	}
-
-	[HarmonyPatch(typeof(WorldGenStep_Factions), "GenerateFresh")]
-	public static class SelectiveWorldGenerationToo
-	{
-		[HarmonyPrefix]
-		public static bool DontReplace()
-		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
-			{
-				Find.GameInitData.playerFaction = WorldSwitchUtility.SavedPlayerFaction;
-				Find.World.factionManager.Add(WorldSwitchUtility.SavedPlayerFaction);
-			}
-
-			return true;
-		}
-
-		[HarmonyPostfix]
-		public static void LoadNow()
-		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
-			{
-				WorldSwitchUtility.LoadUniqueIDsFactionsAndWorldPawns();
-				foreach (Faction fac in Find.FactionManager.AllFactions)
-				{
-					if (fac.def.hidden)
-					{
-						foreach (Faction fac2 in Find.FactionManager.AllFactions)
+						if (thingList[j].def.hasInteractionCell && thingList[j].InteractionCell == c)
 						{
-							if (fac != fac2)
-							{
-								fac.TryMakeInitialRelationsWith(fac2);
-							}
+							__result = false;
+							return false;
 						}
 					}
 				}
-			}
-		}
-	}
-
-	[HarmonyPatch(typeof(FactionGenerator), "GenerateFactionsIntoWorld")]
-	public static class DontRegenerateHiddenFactions
-	{
-		[HarmonyPrefix]
-		public static bool PossiblyReplace()
-		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
-			{
-				WorldSwitchUtility.FactionRelationFlag = true;
-				return false;
-			}
-
-			return true;
-		}
-
-		[HarmonyPostfix]
-		public static void Replace(Dictionary<FactionDef, int> factions)
-		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
-			{
-				int i = 0;
-				foreach (FactionDef current in DefDatabase<FactionDef>.AllDefs)
-				{
-					for (int j = 0; j < ((factions != null && factions.ContainsKey(current)) ? factions[current] : current.requiredCountAtGameStart); j++)
-					{
-						if (!current.hidden)
-						{
-							Faction faction = FactionGenerator.NewGeneratedFaction(new FactionGeneratorParms(current));
-							Find.FactionManager.Add(faction);
-							i++;
-						}
-					}
-				}
-
-				IEnumerable<Faction> source = Find.World.factionManager.AllFactionsListForReading.Where((Faction x) => !x.def.isPlayer && !x.Hidden && !x.temporary);
-				if (source.Any())
-				{
-					int num3 = GenMath.RoundRandom((float)Find.WorldGrid.TilesCount / 100000f * new FloatRange(75f, 85f).RandomInRange * Find.World.info.overallPopulation.GetScaleFactor());
-					num3 -= Find.WorldObjects.Settlements.Count;
-					for (int j = 0; j < num3; j++)
-					{
-						Faction faction2 = source.RandomElementByWeight((Faction x) => x.def.settlementGenerationWeight);
-						Settlement settlement = (Settlement)WorldObjectMaker.MakeWorldObject(WorldObjectDefOf.Settlement);
-						settlement.SetFaction(faction2);
-						settlement.Tile = TileFinder.RandomSettlementTileFor(faction2);
-						settlement.Name = SettlementNameGenerator.GenerateSettlementName(settlement);
-						Find.WorldObjects.Add(settlement);
-					}
-				}
-				Find.IdeoManager.SortIdeos();
-
-				WorldSwitchUtility.FactionRelationFlag = false;
-			}
-		}
-	}
-
-	[HarmonyPatch(typeof(Page_SelectScenario), "BeginScenarioConfiguration")]
-	public static class DoNotWipeGame
-	{
-		[HarmonyPrefix]
-		public static bool UseTheFlag()
-		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
-			{
 				return false;
 			}
 			return true;
-		}
-	}
-
-	[HarmonyPatch(typeof(MainMenuDrawer), "Init")]
-	public static class SelectiveWorldGenCancel
-	{
-		[HarmonyPrefix]
-		public static bool CancelFlag()
-		{
-			WorldSwitchUtility.SelectiveWorldGenFlag = false;
-			return true;
-		}
-	}
-
-	[HarmonyPatch(typeof(Page), "CanDoBack")]
-	public static class NoGoingBackWhenMakingANewScenario
-	{
-		[HarmonyPostfix]
-		public static void Nope(ref bool __result)
-		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
-				__result = false;
-		}
-	}
-
-	[HarmonyPatch(typeof(World), "GetUniqueLoadID")]
-	public static class FixLoadID
-	{
-		[HarmonyPostfix]
-		public static void NewID(World __instance, ref string __result)
-		{
-			__result = "World" + __instance.info.name;
-		}
-	}
-
-	[HarmonyPatch(typeof(Game), "LoadGame")]
-	public static class LoadPreviousWorlds
-	{
-		[HarmonyPrefix]
-		public static bool PurgeIt()
-		{
-			WorldSwitchUtility.PurgePWT();
-			return true;
-		}
-	}
-
-	[HarmonyPatch(typeof(FactionManager))]
-	[HarmonyPatch("AllFactionsVisible", MethodType.Getter)]
-	public static class OnlyThisPlanetsVisibleFactions
-	{
-		[HarmonyPostfix]
-		public static void FilterTheFactions(ref IEnumerable<Faction> __result)
-		{
-			if (Current.ProgramState == ProgramState.Playing)
-				__result = WorldSwitchUtility.FactionsOnCurrentWorld(__result).Where(x => !x.def.hidden);
-		}
-	}
-
-	[HarmonyPatch(typeof(FactionManager))]
-	[HarmonyPatch("AllFactions", MethodType.Getter)]
-	public static class OnlyThisPlanetsFactions
-	{
-		[HarmonyPostfix]
-		public static void FilterTheFactions(ref IEnumerable<Faction> __result)
-		{
-			__result = WorldSwitchUtility.FactionsOnCurrentWorld(__result);
-		}
-	}
-
-	[HarmonyPatch(typeof(FactionManager))]
-	[HarmonyPatch("AllFactionsInViewOrder", MethodType.Getter)]
-	public static class OnlyThisPlanetsFactionsInViewOrder
-	{
-		[HarmonyPostfix]
-		public static void FilterTheFactions(ref IEnumerable<Faction> __result)
-		{
-			__result = FactionManager.GetInViewOrder(WorldSwitchUtility.FactionsOnCurrentWorld(__result));
-		}
-	}
-
-	[HarmonyPatch(typeof(FactionManager))]
-	[HarmonyPatch("AllFactionsVisibleInViewOrder", MethodType.Getter)]
-	public static class OnlyThisPlanetsFactionsVisibleInViewOrder
-	{
-		[HarmonyPostfix]
-		public static void FilterTheFactions(ref IEnumerable<Faction> __result)
-		{
-			__result = FactionManager.GetInViewOrder(WorldSwitchUtility.FactionsOnCurrentWorld(__result))
-				.Where(x => !x.def.hidden);
-		}
-	}
-
-	[HarmonyPatch(typeof(FactionManager))]
-	[HarmonyPatch("AllFactionsListForReading", MethodType.Getter)]
-	public static class OnlyThisPlanetsFactionsForReading
-	{
-		[HarmonyPostfix]
-		public static void FilterTheFactions(ref IEnumerable<Faction> __result)
-		{
-			__result = WorldSwitchUtility.FactionsOnCurrentWorld(__result);
-		}
-	}
-
-	[HarmonyPatch(typeof(FactionManager), "GetFactions")]
-	public static class NewFactionTempFix
-	{
-		public static void Postfix(ref IEnumerable<Faction> __result)
-		{
-			__result = WorldSwitchUtility.FactionsOnCurrentWorld(__result);
-		}
-	}
-
-	[HarmonyPatch(typeof(FactionManager))]
-	[HarmonyPatch("FirstFactionOfDef")]
-	public static class OnlyThisPlanetsFirstFactions
-	{
-		[HarmonyPostfix]
-		public static void FilterTheFactions(ref Faction __result, FactionDef facDef)
-		{
-			__result = Find.FactionManager.AllFactions.Where(x => x.def == facDef).FirstOrDefault();
-		}
-	}
-
-	[HarmonyPatch(typeof(FactionManager), "RecacheFactions")]
-	public static class NoRecache
-	{
-		[HarmonyPrefix]
-		public static bool CheckFlag()
-		{
-			return !WorldSwitchUtility.NoRecache;
-		}
-	}
-
-	[HarmonyPatch(typeof(Faction), "RelationWith")]
-	public static class FactionRelationsAcrossWorlds
-	{
-		[HarmonyPrefix]
-		public static bool RunOriginalMethod(Faction __instance, Faction other, out bool __state)
-		{
-			__state = false;
-			if (Current.ProgramState != ProgramState.Playing)
-				return true;
-			if (__instance == Faction.OfPlayer || other == Faction.OfPlayer)
-				return true;
-			if (WorldSwitchUtility.PastWorldTracker.WorldFactions.Keys.Contains(Find.World.info.name))
-			{
-				if (WorldSwitchUtility.PastWorldTracker.WorldFactions[Find.World.info.name].myFactions
-					.Contains(__instance.GetUniqueLoadID()) && WorldSwitchUtility.PastWorldTracker
-					.WorldFactions[Find.World.info.name].myFactions.Contains(other.GetUniqueLoadID()))
-					return true;
-				__state = true;
-				return false;
-			}
-			return true;
-		}
-
-		[HarmonyPostfix]
-		public static void ReturnDummy(ref FactionRelation __result, bool __state)
-		{
-			if (__state)
-			{
-				__result = new FactionRelation();
-			}
-		}
-	}
-
-	[HarmonyPatch(typeof(ThingOwnerUtility), "GetAllThingsRecursively")]
-	[HarmonyPatch(new Type[] { typeof(IThingHolder), typeof(bool) })]
-	public static class FixThatPawnGenerationBug
-	{
-		[HarmonyPrefix]
-		public static bool DisableMethod()
-		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
-				return false;
-			return true;
-		}
-
-		[HarmonyPostfix]
-		public static void ReturnEmptyList(ref List<Thing> __result)
-		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
-			{
-				__result = new List<Thing>();
-			}
-		}
-	}
-
-	[HarmonyPatch(typeof(ThingOwnerUtility), "GetAllThingsRecursively")]
-	[HarmonyPatch(new Type[] { typeof(IThingHolder), typeof(List<Thing>), typeof(bool), typeof(Predicate<IThingHolder>) })]
-	public static class FixThatPawnGenerationBug2
-	{
-		[HarmonyPrefix]
-		public static bool DisableMethod()
-		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
-				return false;
-			return true;
-		}
-	}
-
-	[HarmonyPatch(typeof(PawnGenerator), "GeneratePawnRelations")]
-	public static class FixThatPawnGenerationBug3
-	{
-		[HarmonyPrefix]
-		public static bool DisableMethod()
-		{
-			if (WorldSwitchUtility.SelectiveWorldGenFlag)
-				return false;
-			return true;
-		}
-	}
-
-	[HarmonyPatch(typeof(PawnGroupMakerUtility), "TryGetRandomFactionForCombatPawnGroup")]
-	public static class NoRaidsFromPreviousPlanets
-	{
-		[HarmonyPrefix]
-		public static bool DisableMethod()
-		{
-			return false;
-		}
-
-		[HarmonyPostfix]
-		public static void Replace(ref bool __result, float points, out Faction faction,
-			Predicate<Faction> validator = null, bool allowNonHostileToPlayer = false, bool allowHidden = false,
-			bool allowDefeated = false, bool allowNonHumanlike = true)
-		{
-			List<Faction> source = WorldSwitchUtility.FactionsOnCurrentWorld(Find.FactionManager.AllFactions).Where(
-				delegate (Faction f) {
-					int arg_E3_0;
-					if ((allowHidden || !f.def.hidden) && (allowDefeated || !f.defeated) &&
-						(allowNonHumanlike || f.def.humanlikeFaction) &&
-						(allowNonHostileToPlayer || f.HostileTo(Faction.OfPlayer)) &&
-						f.def.pawnGroupMakers != null)
-					{
-						if (f.def.pawnGroupMakers.Any((PawnGroupMaker x) =>
-							x.kindDef == PawnGroupKindDefOf.Combat) && (validator == null || validator(f)))
-						{
-							arg_E3_0 = ((points >= f.def.MinPointsToGeneratePawnGroup(PawnGroupKindDefOf.Combat))
-								? 1
-								: 0);
-							return arg_E3_0 != 0;
-						}
-					}
-
-					arg_E3_0 = 0;
-					return arg_E3_0 != 0;
-				}).ToList<Faction>();
-			__result = source.TryRandomElementByWeight((Faction f) => f.def.RaidCommonalityFromPoints(points),
-				out faction);
-		}
-	}
-
-	[HarmonyPatch(typeof(WorldGrid), "RawDataToTiles")]
-	public static class FixWorldLoadBug
-	{
-		[HarmonyPrefix]
-		public static bool SelectiveLoad()
-		{
-			return !WorldSwitchUtility.LoadWorldFlag;
 		}
 	}
 	
@@ -5373,32 +5162,8 @@ namespace SaveOurShip2
 			return true;
 		}
 	}
-	
-	//holographic race
-	[HarmonyPatch(typeof(Pawn_ApparelTracker))]
-	[HarmonyPatch("PsychologicallyNude", MethodType.Getter)]
-	public static class HologramNudityIsOkay
-	{
-		[HarmonyPostfix]
-		public static void DoNotFearMyHolographicJunk(Pawn_ApparelTracker __instance, ref bool __result)
-		{
-			if (ShipInteriorMod2.IsHologram(__instance.pawn))
-			{
-				__result = __instance.pawn.story.traits.HasTrait(TraitDefOf.Nudist);
-			}
-		}
-	}
 
-	[HarmonyPatch(typeof(ApparelUtility), "HasPartsToWear")]
-	public static class HologramsCannotWear
-    {
-		public static void Postfix(Pawn p, ThingDef apparel, ref bool __result)
-        {
-			if (ShipInteriorMod2.IsHologram(p) && apparel.thingClass != typeof(ApparelHolographic) && !apparel.apparel.tags.Contains("HologramGear"))
-				__result = false;
-        }
-    }
-
+	// Formgels - simpler than holograms!
 	[HarmonyPatch(typeof(Pawn),"Kill")]
 	public static class CorpseRemoval
     {
@@ -5409,193 +5174,9 @@ namespace SaveOurShip2
 				if(__instance.Corpse!=null)
 					__instance.Corpse.Destroy();
 				if(!__instance.health.hediffSet.GetFirstHediff<HediffPawnIsHologram>().consciousnessSource.Destroyed)
-				ResurrectionUtility.Resurrect(__instance);
+					ResurrectionUtility.Resurrect(__instance);
             }
         }
-    }
-
-	[HarmonyPatch(typeof(MeditationUtility), "CanMeditateNow")]
-	public static class HologramsCanMeditate
-    {
-		public static bool Prefix(Pawn pawn)
-        {
-			return !ShipInteriorMod2.IsHologram(pawn);
-        }
-
-		public static void Postfix(Pawn pawn, ref bool __result)
-        {
-			if(ShipInteriorMod2.IsHologram(pawn))
-            {
-				__result = pawn.Awake();
-			}
-        }
-    }
-
-	[HarmonyPatch(typeof(GatheringsUtility), "ShouldGuestKeepAttendingGathering")]
-	public static class HologramsCanParty
-	{
-		public static bool Prefix(Pawn p, ref bool __result)
-		{
-			if (p.needs?.food == null || p.needs?.rest == null)
-			{
-				return HologramResult(p, out __result);
-			}
-			return true;
-		}
-
-		private static bool HologramResult(Pawn p, out bool __result)
-		{
-			__result = (!p.Downed && (p.needs?.food == null || !p.needs.food.Starving) && p.health.hediffSet.BleedRateTotal <= 0f && (p.needs?.rest == null || (int)p.needs.rest.CurCategory < 3) && !p.health.hediffSet.HasTendableNonInjuryNonMissingPartHediff(false) && RestUtility.Awake(p) && !p.InAggroMentalState && !p.IsPrisoner);
-			return false;
-		}
-	}
-
-	[HarmonyPatch(typeof(LovePartnerRelationUtility), "GetLovinMtbHours")]
-	public static class HologramsCanGetSome
-    {
-		public static bool Prefix(Pawn pawn, Pawn partner)
-        {
-			return !ShipInteriorMod2.IsHologram(pawn) && !ShipInteriorMod2.IsHologram(partner);
-        }
-
-		public static void Postfix(Pawn pawn, Pawn partner, ref float __result)
-        {
-			if(ShipInteriorMod2.IsHologram(pawn) || ShipInteriorMod2.IsHologram(partner))
-            {
-				if (pawn.Dead || partner.Dead)
-				{
-					__result = - 1f;
-					return;
-				}
-				if (DebugSettings.alwaysDoLovin)
-				{
-					__result = 0.1f;
-					return;
-				}
-				if ((pawn.needs.food != null && pawn.needs.food.Starving) || (partner.needs.food !=null && partner.needs.food.Starving))
-				{
-					__result = -1f;
-					return;
-				}
-				if (pawn.health.hediffSet.BleedRateTotal > 0f || partner.health.hediffSet.BleedRateTotal > 0f)
-				{
-					__result = -1f;
-					return;
-				}
-				MethodInfo SingleFactor = typeof(LovePartnerRelationUtility).GetMethod("LovinMtbSinglePawnFactor", BindingFlags.NonPublic | BindingFlags.Static);
-				float num = (float)SingleFactor.Invoke(null, new object[] { pawn });
-				if (num <= 0f)
-				{
-					__result = -1f;
-					return;
-				}
-				float num2 = (float)SingleFactor.Invoke(null, new object[] { partner });
-				if (num2 <= 0f)
-				{
-					__result = -1f;
-					return;
-				}
-				float num3 = 12f;
-				num3 *= num;
-				num3 *= num2;
-				num3 /= Mathf.Max(pawn.relations.SecondaryLovinChanceFactor(partner), 0.1f);
-				num3 /= Mathf.Max(partner.relations.SecondaryLovinChanceFactor(pawn), 0.1f);
-				num3 *= GenMath.LerpDouble(-100f, 100f, 1.3f, 0.7f, pawn.relations.OpinionOf(partner));
-				num3 *= GenMath.LerpDouble(-100f, 100f, 1.3f, 0.7f, partner.relations.OpinionOf(pawn));
-				if (pawn.health.hediffSet.HasHediff(HediffDefOf.PsychicLove))
-				{
-					num3 /= 4f;
-				}
-				__result = num3;
-			}
-        }
-    }
-
-	[HarmonyPatch(typeof(Pawn_RelationsTracker), "SecondaryLovinChanceFactor")]
-	public static class HologramsAreRomantic
-	{
-		public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-		{
-			if (ModLister.HasActiveModWithName("Humanoid Alien Races"))
-				return instructions;
-
-			List<CodeInstruction> newInstructions = new List<CodeInstruction>();
-
-			newInstructions.Add(new CodeInstruction(OpCodes.Ldarg_0));
-			newInstructions.Add(CodeInstruction.LoadField(typeof(Pawn_RelationsTracker), "pawn"));
-			newInstructions.Add(new CodeInstruction(OpCodes.Ldarg_1));
-			newInstructions.Add(CodeInstruction.Call(typeof(HologramsAreRomantic), "AreCompatible"));
-			newInstructions.Add(new CodeInstruction(OpCodes.Ldc_I4, 0));
-
-			int index = 0;
-			foreach(CodeInstruction instr in instructions)
-            {
-				if (index >= 9)
-					newInstructions.Add(instr);
-				index++;
-            }
-			return newInstructions;
-		}
-
-		public static int AreCompatible(Pawn pawnA, Pawn pawnB)
-        {
-			return (pawnA != pawnB && pawnA.RaceProps.intelligence == Intelligence.Humanlike && pawnB.RaceProps.intelligence == Intelligence.Humanlike) ? 1 : 0;
-        }
-	}
-
-	[HarmonyPatch(typeof(Pawn_RelationsTracker), "CompatibilityWith")]
-	public static class HologramsAreCompatible
-	{
-		public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-		{
-			if (ModLister.HasActiveModWithName("Humanoid Alien Races"))
-				return instructions;
-
-			List<CodeInstruction> newInstructions = new List<CodeInstruction>();
-
-			newInstructions.Add(new CodeInstruction(OpCodes.Ldarg_0));
-			newInstructions.Add(CodeInstruction.LoadField(typeof(Pawn_RelationsTracker),"pawn"));
-			newInstructions.Add(new CodeInstruction(OpCodes.Ldarg_1));
-			newInstructions.Add(CodeInstruction.Call(typeof(HologramsAreRomantic),"AreCompatible"));
-			newInstructions.Add(new CodeInstruction(OpCodes.Ldc_I4, 0));
-
-			int index = 0;
-			foreach (CodeInstruction instr in instructions)
-			{
-				if (index >= 9)
-					newInstructions.Add(instr);
-				index++;
-			}
-			return newInstructions;
-		}
-	}
-
-	[HarmonyPatch(typeof(CaravanFormingUtility), "AllSendablePawns")]
-	public static class NoEscapeForHolograms
-    {
-		public static void Postfix(ref List<Pawn> __result)
-        {
-			List<Pawn> newList = new List<Pawn>();
-			foreach(Pawn pawn in __result)
-            {
-				if (!ShipInteriorMod2.IsHologram(pawn))
-					newList.Add(pawn);
-            }
-			__result = newList;
-        }
-    }
-
-	[HarmonyPatch(typeof(PawnRenderer), "ShellFullyCoversHead")]
-	public static class DoesNotActuallyCoverHead
-    {
-		public static void Postfix(PawnRenderer __instance, ref bool __result)
-        {
-			foreach(ApparelGraphicRecord apparel in __instance.graphics.apparelGraphics)
-			{
-				if (apparel.sourceApparel.def == ResourceBank.ThingDefOf.Apparel_HologramRelay)
-					__result = false;
-			}
-		}
     }
 
 	[HarmonyPatch(typeof(ThoughtWorker_AgeReversalDemanded), "CanHaveThought")]
@@ -5608,100 +5189,6 @@ namespace SaveOurShip2
         }
     }
 
-	[HarmonyPatch(typeof(Apparel), "get_WornGraphicPath")]
-	public static class HologramClothingAppearance
-    {
-		public static void Postfix(ref string __result, Apparel __instance)
-        {
-			if(__instance is ApparelHolographic)
-            {
-				__result = ((ApparelHolographic)__instance).apparelToMimic.apparel.wornGraphicPath;
-            }
-        }
-    }
-
-	[HarmonyPatch(typeof(ApparelRequirement), "IsMet")]
-	public static class HoloApparelIdeologyRole
-    {
-		public static void Postfix(ref bool __result, ApparelRequirement __instance, Pawn p)
-        {
-			foreach (Apparel itemApparel in p.apparel.WornApparel)
-			{
-				if (itemApparel is ApparelHolographic)
-				{
-					ApparelHolographic item = (ApparelHolographic)itemApparel;
-					bool flag = false;
-					for (int i = 0; i < __instance.bodyPartGroupsMatchAny.Count; i++)
-					{
-						if (item.apparelToMimic.apparel.bodyPartGroups.Contains(__instance.bodyPartGroupsMatchAny[i]))
-						{
-							flag = true;
-							break;
-						}
-					}
-					if (flag)
-					{
-						if (__instance.requiredDefs != null && __instance.requiredDefs.Contains(item.apparelToMimic))
-						{
-							__result = true;
-							return;
-						}
-						if (__instance.requiredTags != null)
-						{
-							for (int j = 0; j < __instance.requiredTags.Count; j++)
-							{
-								if (item.apparelToMimic.apparel.tags.Contains(__instance.requiredTags[j]))
-								{
-									__result = true;
-									return;
-								}
-							}
-						}
-						if (__instance.allowedTags != null)
-						{
-							for (int k = 0; k < __instance.allowedTags.Count; k++)
-							{
-								if (item.apparelToMimic.apparel.tags.Contains(__instance.allowedTags[k]))
-								{
-									__result = true;
-									return;
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-    }
-
-	[HarmonyPatch(typeof(IncidentWorker_DiseaseHuman), "PotentialVictimCandidates")]
-	public static class HologramsDontGetDiseases
-    {
-		public static void Postfix(ref IEnumerable<Pawn> __result)
-        {
-			List<Pawn> newResult = new List<Pawn>();
-			foreach(Pawn pawn in __result)
-            {
-				if (!ShipInteriorMod2.IsHologram(pawn))
-					newResult.Add(pawn);
-            }
-			__result = newResult;
-        }
-    }
-
-	[HarmonyPatch(typeof(ImmunityHandler), "AnyHediffMakesFullyImmuneTo")]
-	public static class HologramsDontGetDiseasesToo
-    {
-		public static void Postfix(ref bool __result, ImmunityHandler __instance, ref Hediff sourceHediff)
-        {
-			if (ShipInteriorMod2.IsHologram(__instance.pawn))
-			{
-				__result = true;
-				sourceHediff = __instance.pawn.health.hediffSet.GetFirstHediff<HediffPawnIsHologram>();
-			}
-        }
-    }
-
 	[HarmonyPatch(typeof(SkillRecord), "Interval")]
 	public static class MachineHologramsPerfectMemory
     {
@@ -5711,41 +5198,86 @@ namespace SaveOurShip2
         }
     }
 
-	[HarmonyPatch(typeof(SickPawnVisitUtility), "CanVisit")]
-	public static class NoVisitingHolograms
-    {
-		public static void Postfix(Pawn sick, ref bool __result)
-        {
-			if (ShipInteriorMod2.IsHologram(sick))
-				__result = false;
-        }
-    }
-
-	[HarmonyPatch(typeof(WorkGiver_Warden_DeliverFood), "JobOnThing")]
-	public static class NoFeedingTheHolograms
-	{
-		public static bool Prefix(Thing t)
-		{
-			return !(t is Pawn) || !ShipInteriorMod2.IsHologram((Pawn)t);
-		}
-
-		public static void Postfix(Thing t, ref Job __result)
-		{
-			if (t is Pawn && ShipInteriorMod2.IsHologram((Pawn)t))
-				__result = null;
-		}
-	}
-
 	[HarmonyPatch(typeof(Pawn_StoryTracker), "get_SkinColor")]
 	public static class SkinColorPostfixPostfix
     {
 		[HarmonyPriority(Priority.Last)]
 		public static void Postfix(Pawn ___pawn, ref Color __result, Pawn_StoryTracker __instance)
         {
-			if (ShipInteriorMod2.IsHologram(___pawn))
+			if (ShipInteriorMod2.IsHologram(___pawn) && __instance.skinColorOverride.HasValue)
 				__result = __instance.skinColorOverride.Value;
         }
     }
+
+	[HarmonyPatch(typeof(Recipe_BloodTransfusion), "AvailableOnNow")]
+	public static class FormgelsHaveNoBlood
+	{
+		public static void Postfix(ref bool __result, Thing thing)
+		{
+			if (thing is Pawn && ShipInteriorMod2.IsHologram(((Pawn)thing)))
+				__result = false;
+		}
+	}
+
+	[HarmonyPatch(typeof(Recipe_ExtractHemogen), "AvailableOnNow")]
+	public static class FormgelsStillHaveNoBlood
+	{
+		public static void Postfix(ref bool __result, Thing thing)
+		{
+			if (thing is Pawn && ShipInteriorMod2.IsHologram(((Pawn)thing)))
+				__result = false;
+		}
+	}
+
+	[HarmonyPatch(typeof(Recipe_InstallArtificialBodyPart), "GetPartsToApplyOn")]
+	public static class FormgelsCannotUseBionics
+	{
+		public static void Postfix(ref IEnumerable<BodyPartRecord> __result, Pawn pawn)
+		{
+			if (ShipInteriorMod2.IsHologram(pawn))
+				__result = new List<BodyPartRecord>();
+		}
+	}
+
+	[HarmonyPatch(typeof(Recipe_InstallImplant), "GetPartsToApplyOn")]
+	public static class FormgelsCannotUseImplants
+	{
+		public static void Postfix(ref IEnumerable<BodyPartRecord> __result, Pawn pawn)
+		{
+			if (ShipInteriorMod2.IsHologram(pawn))
+				__result = new List<BodyPartRecord>();
+		}
+	}
+
+	[HarmonyPatch(typeof(Recipe_RemoveImplant), "GetPartsToApplyOn")]
+	public static class FormgelsStillCannotUseImplants
+	{
+		public static void Postfix(ref IEnumerable<BodyPartRecord> __result, Pawn pawn)
+		{
+			if (ShipInteriorMod2.IsHologram(pawn))
+				__result = new List<BodyPartRecord>();
+		}
+	}
+
+	[HarmonyPatch(typeof(Recipe_InstallNaturalBodyPart), "GetPartsToApplyOn")]
+	public static class FormgelsCannotUseOrgans
+	{
+		public static void Postfix(ref IEnumerable<BodyPartRecord> __result, Pawn pawn)
+		{
+			if (ShipInteriorMod2.IsHologram(pawn))
+				__result = new List<BodyPartRecord>();
+		}
+	}
+
+	[HarmonyPatch(typeof(Recipe_RemoveBodyPart), "GetPartsToApplyOn")]
+	public static class FormgelsHaveNoOrgans
+	{
+		public static void Postfix(ref IEnumerable<BodyPartRecord> __result, Pawn pawn)
+		{
+			if (ShipInteriorMod2.IsHologram(pawn))
+				__result = new List<BodyPartRecord>();
+		}
+	}
 
 	[HarmonyPatch(typeof(GenStep_Fog), "Generate")]
 	public static class UnfogVault
@@ -5758,149 +5290,6 @@ namespace SaveOurShip2
 			}
 		}
     }
-
-	[HarmonyPatch(typeof(JobDriver_InteractAnimal), "RequiredNutritionPerFeed")]
-	public static class TameWildHologram
-	{
-		public static bool Prefix(Pawn animal)
-		{
-			return animal.needs.food != null;
-		}
-
-		public static void Postfix(Pawn animal, ref float __result)
-		{
-			if (animal.needs.food == null)
-				__result = 0;
-		}
-	}
-
-	[HarmonyPatch(typeof(WorkGiver_InteractAnimal), "HasFoodToInteractAnimal")]
-	public static class TameWildHologramToo
-	{
-		public static bool Prefix(Pawn tamee)
-		{
-			return tamee.needs.food != null;
-		}
-
-		public static void Postfix(Pawn tamee, ref bool __result)
-		{
-			if (tamee.needs.food == null)
-				__result = true;
-		}
-	}
-
-	[HarmonyPatch(typeof(WorkGiver_InteractAnimal), "TakeFoodForAnimalInteractJob")]
-	public static class TameWildHologramThree
-	{
-		public static bool Prefix(Pawn tamee)
-		{
-			return tamee.needs.food != null;
-		}
-
-		public static void Postfix(Pawn tamee, ref Job __result)
-		{
-			if (tamee.needs.food == null)
-			{
-				__result = JobMaker.MakeJob(JobDefOf.Goto, tamee.Position);
-			}
-		}
-	}
-
-	[HarmonyPatch(typeof(JobDriver_InteractAnimal), "StartFeedAnimal")]
-	public static class TameWildHologramFour
-	{
-		public static bool Prefix(JobDriver_InteractAnimal __instance, TargetIndex tameeInd)
-		{
-			return ((Pawn)__instance.pawn.CurJob.GetTarget(tameeInd)).needs.food != null;
-		}
-
-		public static void Postfix(JobDriver_InteractAnimal __instance, TargetIndex tameeInd, ref Toil __result)
-		{
-			if (((Pawn)__instance.pawn.CurJob.GetTarget(tameeInd)).needs.food == null)
-				__result = Toils_General.Wait(10);
-		}
-	}
-
-	[HarmonyPatch(typeof(JobDriver_InteractAnimal), "FeedToils")]
-	public static class TameWildHologramFive
-	{
-		public static bool Prefix(JobDriver_InteractAnimal __instance)
-		{
-			return ((Pawn)__instance.job.targetA.Thing).needs.food != null;
-		}
-
-		public static void Postfix(JobDriver_InteractAnimal __instance, ref IEnumerable<Toil> __result)
-		{
-			if (((Pawn)__instance.job.targetA.Thing).needs.food == null)
-			{
-				List<Toil> newResult = new List<Toil>();
-				newResult.Add(Toils_Goto.GotoThing(TargetIndex.A, PathEndMode.Touch));
-				__result = newResult;
-			}
-		}
-	}
-
-	[HarmonyPatch(typeof(Toils_Ingest), "FinalizeIngest")]
-	public static class HologramsDoNotEatIMeanItSeriously
-	{
-		public static void Postfix(Pawn ingester, TargetIndex ingestibleInd, ref Toil __result)
-		{
-			if (ingester.needs.food == null)
-			{
-				__result.initAction = delegate
-				{
-					Pawn actor = ingester;
-					Job curJob = actor.jobs.curJob;
-					Thing thing = curJob.GetTarget(ingestibleInd).Thing;
-					thing.Ingested(ingester, 0);
-				};
-			}
-		}
-	}
-
-	[HarmonyPatch(typeof(JobGiver_EatInGatheringArea), "TryGiveJob")]
-	public static class HologramsParty
-	{
-		public static bool Prefix(Pawn pawn)
-		{
-			return pawn.needs.food != null;
-		}
-
-		public static void Postfix(Pawn pawn, ref Job __result)
-		{
-			if (pawn.needs.food == null)
-			{
-				__result = null;
-			}
-		}
-	}
-
-	[HarmonyPatch(typeof(PawnApparelGenerator), "CanUsePair")]
-	public static class NoHolographicGearOnGeneratedPawns
-	{
-		public static bool Postfix(bool __result, ThingStuffPair pair, Pawn pawn)
-		{
-			if (pair.thing.IsApparel && pair.thing.apparel.tags != null && pair.thing.apparel.tags.Contains("HologramGear") && pawn.health.hediffSet.GetFirstHediff<HediffPawnIsHologram>() != null)
-			{
-				return false;
-			}
-			return __result;
-		}
-	}
-
-	[HarmonyPatch(typeof(PawnWeaponGenerator), "GetWeaponCommonalityFromIdeo")]
-	public static class NoHolographicWeaponsOnGeneratedPawns
-	{
-		static WeaponClassDef hologramClass = DefDatabase<WeaponClassDef>.GetNamed("HologramGear");
-
-		public static void Postfix(ThingStuffPair pair, Pawn pawn, ref float __result)
-		{
-			if (pair.thing.IsWeapon && pair.thing.weaponClasses != null && pair.thing.weaponClasses.Contains(hologramClass) && pawn.health.hediffSet.GetFirstHediff<HediffPawnIsHologram>() != null)
-			{
-				__result = 0f;
-			}
-		}
-	}
 	
 	//storyteller
 	[HarmonyPatch(typeof(Map), "get_PlayerWealthForStoryteller")]
@@ -6405,4 +5794,163 @@ namespace SaveOurShip2
 
 		}
 	}*/
+
+	//AI cores should be able to control mechanoids by default, and this is a hill I will die on
+	[HarmonyPatch(typeof(MechanitorUtility), "IsMechanitor")]
+	public static class AICoreIsMechanitor
+    {
+		public static void Postfix(Pawn pawn, ref bool __result)
+        {
+			if (pawn.health.hediffSet.HasHediff(HediffDef.Named("SoSHologramMachine")) || pawn.health.hediffSet.HasHediff(HediffDef.Named("SoSHologramArchotech")))
+				__result = true;
+		}
+    }
+
+	//For loading ships
+	[HarmonyPatch(typeof(Page_ChooseIdeoPreset), "PostOpen")]
+	public static class DoNotRemoveMyIdeo
+    {
+		public static bool Prefix()
+        {
+			return !WorldSwitchUtility.LoadShipFlag;
+        }
+
+		public static void Postfix(Page_ChooseIdeoPreset __instance)
+        {
+			if(WorldSwitchUtility.LoadShipFlag)
+            {
+				foreach (Faction allFaction in Find.FactionManager.AllFactions)
+				{
+					if (allFaction != Faction.OfPlayer && allFaction.ideos != null && allFaction.ideos.PrimaryIdeo.memes.NullOrEmpty())
+					{
+						allFaction.ideos.ChooseOrGenerateIdeo(new IdeoGenerationParms(allFaction.def));
+					}
+				}
+				Faction.OfPlayer.ideos.SetPrimary(ScenPart_LoadShip.playerFactionIdeo);
+				IdeoUIUtility.selected = ScenPart_LoadShip.playerFactionIdeo;
+				ScenPart_LoadShip.AddIdeo(Faction.OfPlayer.ideos.PrimaryIdeo);
+				Page_ConfigureIdeo page_ConfigureIdeo = new Page_ConfigureIdeo();
+				page_ConfigureIdeo.prev = __instance.prev;
+				page_ConfigureIdeo.next = __instance.next;
+				__instance.next.prev = page_ConfigureIdeo;
+				Find.WindowStack.Add(page_ConfigureIdeo);
+				__instance.Close();
+			}
+        }
+    }
+
+	[HarmonyPatch(typeof(Page_ConfigureStartingPawns),"PreOpen")]
+	public static class NoNeedForMorePawns
+    {
+		public static bool Prefix()
+        {
+			return !WorldSwitchUtility.LoadShipFlag;
+        }
+
+		public static void Postfix(Page_ConfigureStartingPawns __instance)
+        {
+			if (WorldSwitchUtility.LoadShipFlag)
+			{
+				if (__instance.next != null)
+				{
+					__instance.prev.next = __instance.next;
+					__instance.next.prev = __instance.prev;
+					Find.WindowStack.Add(__instance.next);
+				}
+				if (__instance.nextAct != null)
+				{
+					__instance.nextAct();
+				}
+				__instance.Close();
+			}
+        }
+    }
+
+	[HarmonyPatch(typeof(Scenario), "GetFullInformationText")]
+	public static class RemoveUnwantedScenPartText
+    {
+		public static bool Prefix(Scenario __instance)
+        {
+			return __instance.AllParts.Where(part => part is ScenPart_LoadShip && ((ScenPart_LoadShip)part).HasValidFilename()).Count() == 0;
+        }
+
+		public static void Postfix(Scenario __instance, ref string __result)
+        {
+			if(__instance.AllParts.Where(part => part is ScenPart_LoadShip && ((ScenPart_LoadShip)part).HasValidFilename()).Count() > 0)
+            {
+				try
+				{
+					StringBuilder stringBuilder = new StringBuilder();
+					foreach (ScenPart allPart in __instance.AllParts)
+					{
+						allPart.summarized = false;
+					}
+					foreach (ScenPart item in from p in __instance.AllParts
+											  orderby p.def.summaryPriority descending, p.def.defName
+											  where p.visible
+											  select p)
+					{
+						if (ShipInteriorMod2.CompatibleWithShipLoad(item))
+						{
+							string text = item.Summary(__instance);
+							if (!text.NullOrEmpty())
+							{
+								stringBuilder.AppendLine(text);
+							}
+						}
+					}
+					__result = stringBuilder.ToString().TrimEndNewlines();
+					return;
+				}
+				catch (Exception ex)
+				{
+					Log.ErrorOnce("Exception in Scenario.GetFullInformationText():\n" + ex.ToString(), 10395878);
+					__result = "Cannot read data.";
+				}
+			}
+        }
+    }
+
+	[HarmonyPatch(typeof(GameInitData), "PrepForMapGen")]
+	public static class FixPawnGen
+    {
+		public static bool Prefix()
+        {
+			return !WorldSwitchUtility.LoadShipFlag;
+        }
+    }
+
+	[HarmonyPatch(typeof(MapGenerator), "GenerateMap")]
+	public static class DoNotActuallyInitMap
+    {
+		public static bool Prefix()
+        {
+			return !WorldSwitchUtility.LoadShipFlag;
+        }
+
+		public static void Postfix(MapParent parent, ref Map __result)
+        {
+			if (WorldSwitchUtility.LoadShipFlag)
+			{
+				parent.Destroy();
+				WorldSwitchUtility.LoadShipFlag = false;
+				__result = ScenPart_LoadShip.GenerateShipSpaceMap();
+			}
+		}
+    }
+
+	[HarmonyPatch(typeof(Scenario),"GetFirstConfigPage")]
+	public static class LoadTheUniqueIDs
+    {
+		public static void Postfix(Scenario __instance)
+		{
+			foreach (ScenPart part in __instance.AllParts)
+			{
+				if (part is ScenPart_LoadShip && ((ScenPart_LoadShip)part).HasValidFilename())
+				{
+					((ScenPart_LoadShip)part).DoEarlyInit();
+				}
+			}
+		}
+    }
 }

@@ -10,7 +10,7 @@ namespace SaveOurShip2
 		static ResourceBank()
 		{
 			shipZeroEnemy = GraphicDatabase.Get(typeof(Graphic_Single), "UI/Enemy_Icon_Off",
-			ShaderDatabase.Cutout, new Vector2(1, 1), Color.red, Color.red);			
+			ShaderDatabase.Cutout, new Vector2(1, 1), Color.red, Color.red);
 			shipOneEnemy = GraphicDatabase.Get(typeof(Graphic_Single), "UI/Enemy_Icon_On_slow",
 			ShaderDatabase.Cutout, new Vector2(1, 1), Color.red, Color.red);
 			shipTwoEnemy = GraphicDatabase.Get(typeof(Graphic_Single), "UI/Enemy_Icon_On_mid",
@@ -70,7 +70,6 @@ namespace SaveOurShip2
         {
             public static ThingDef MechaniteFire;
 			public static ThingDef ShipArchotechSpore;
-			public static ThingDef Apparel_HologramRelay;
 			public static ThingDef Ship_Beam;
 			public static ThingDef Ship_Beam_Wrecked;
 			public static ThingDef ShipAirlockWrecked;
@@ -130,6 +129,18 @@ namespace SaveOurShip2
         {
 			public static ResearchProjectDef ArchotechPillarA;
 			public static ResearchProjectDef ArchotechPillarB;
+		}
+
+		[DefOf]
+		public static class BackstoryDefOf
+        {
+			public static BackstoryDef SoSHologram;
+		}
+
+		[DefOf]
+		public static class WeatherDefOf
+		{
+			public static WeatherDef OuterSpaceWeather;
 		}
 	}
 }
