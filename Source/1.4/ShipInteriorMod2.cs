@@ -3419,21 +3419,21 @@ namespace SaveOurShip2
 	}
 
 	//comms
-	[HarmonyPatch(typeof(Building_CommsConsole), "GetFailureReason")]
-	public static class NoCommsWhenCloaked
-	{
-		public static void Postfix(Pawn myPawn, ref FloatMenuOption __result)
-		{
-			foreach (Building_ShipCloakingDevice cloak in myPawn.Map.GetComponent<ShipHeatMapComp>().Cloaks)
-			{
-				if (cloak.active && cloak.Map == myPawn.Map)
-				{
-					__result = new FloatMenuOption("CannotUseCloakEnabled".Translate(), null, MenuOptionPriority.Default, null, null, 0f, null, null);
-					break;
-				}
-			}
-		}
-	}
+	//[HarmonyPatch(typeof(Building_CommsConsole), "GetFailureReason")]
+	//public static class NoCommsWhenCloaked
+	//{
+	//	public static void Postfix(Pawn myPawn, ref FloatMenuOption __result)
+	//	{
+	//		foreach (Building_ShipCloakingDevice cloak in myPawn.Map.GetComponent<ShipHeatMapComp>().Cloaks)
+	//		{
+	//			if (cloak.active && cloak.Map == myPawn.Map)
+	//			{
+	//				__result = new FloatMenuOption("CannotUseCloakEnabled".Translate(), null, MenuOptionPriority.Default, null, null, 0f, null, null);
+	//				break;
+	//			}
+	//		}
+	//	}
+	//}
 
 	[HarmonyPatch(typeof(TradeShip), "TryOpenComms")]
 	public static class ReplaceCommsIfPirate
@@ -3680,8 +3680,9 @@ namespace SaveOurShip2
 				orbiter.SetFaction(Faction.OfPlayer);
 				orbiter.Tile = ShipInteriorMod2.FindWorldTile();
 				Find.WorldObjects.Add(orbiter);
-				Map myMap = MapGenerator.GenerateMap(ShipInteriorMod2.shipOriginRoot.Map.Size, orbiter, orbiter.MapGeneratorDef);
-				myMap.fogGrid.ClearAllFog();
+                // Map myMap = MapGenerator.GenerateMap(ShipInteriorMod2.shipOriginRoot.Map.Size, orbiter, orbiter.MapGeneratorDef);
+                Map myMap = MapGenerator.GenerateMap(new IntVec3(400, 1, 400), orbiter, orbiter.MapGeneratorDef);
+                myMap.fogGrid.ClearAllFog();
 
 				ShipInteriorMod2.MoveShip(ShipInteriorMod2.shipOriginRoot, myMap, IntVec3.Zero);
 				myMap.weatherManager.TransitionTo(ResourceBank.WeatherDefOf.OuterSpaceWeather);
