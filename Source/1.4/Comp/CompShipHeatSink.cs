@@ -13,15 +13,28 @@ namespace RimWorld
     [StaticConstructorOnStartup]
     public class CompShipHeatSink : CompShipHeat
     {
-        public static readonly float HeatPushMult = 15f; //ratio modifier
-        public float heatStored; //used only when a HB is not on a net
+        public static readonly float HeatPushMult = 20f; //bleed ratio modifier - inverse to Building_ShipVent AddHeatToNetwork
+        public float heatStored; //used only when a HB is not on a net or during PostExposeData
+        public float depletion; //ditto
         public bool inSpace;
         public CompPower powerComp;
-        public bool Disabled = false;
         ShipHeatMapComp mapComp;
         IntVec3 pos; //needed because no predestroy
         Map map; //needed because no predestroy
 
+        public bool disabled;
+        public bool Disabled
+        {
+            get
+            {
+                if (mapComp.Cloaks.Any(c => c.active))
+                {
+                    disabled = true;
+                }
+                disabled = false;
+                return disabled;
+            }
+        }
         public override void PostSpawnSetup(bool respawningAfterLoad)
         {
             base.PostSpawnSetup(respawningAfterLoad);
@@ -33,9 +46,8 @@ namespace RimWorld
         }
         public override void PostDestroy(DestroyMode mode, Map previousMap)
         {
-            float heat = this.Props.heatCapacity * HeatPushMult * RatioInNetwork();
-            pos = pos.GetRoom(map).Cells.FirstOrDefault();
-            GenTemperature.PushHeat(pos, map, heat);
+            if (myNet != null)
+                PushHeat(0, Props.heatCapacity * myNet.RatioInNetwork * HeatPushMult);
             base.PostDestroy(mode, previousMap);
         }
         public override void PostDeSpawn(Map map)
@@ -48,12 +60,10 @@ namespace RimWorld
             //save heat to sinks on save, value clamps
             if (myNet != null && Scribe.mode == LoadSaveMode.Saving)
             {
-                heatStored = Props.heatCapacity * RatioInNetwork();
-                if (heatStored < 0)
-                    heatStored = 0;
-                else if (heatStored > Props.heatCapacity)
-                    heatStored = Props.heatCapacity;
+                heatStored = Props.heatCapacity * myNet.RatioInNetwork;
+                depletion = Props.heatCapacity * myNet.DepletionRatio;
             }
+            Scribe_Values.Look<float>(ref depletion, "depletion");
             Scribe_Values.Look<float>(ref heatStored, "heatStored");
         }
         public override void CompTick()
@@ -65,27 +75,31 @@ namespace RimWorld
             }
             if (this.parent.IsHashIntervalTick(120))
             {
-                if (Props.heatVent > 0 && !Props.antiEntropic) //radiates to space
+                if (Props.heatVent > 0 && !Props.antiEntropic && !Disabled) //radiate to space
                 {
-                    IsDisabled();
-                    if (!Disabled)
+                    if (inSpace)
+                        RemHeatFromNetwork(Props.heatVent);
+                    else
                     {
-                        if (map.IsSpace())
-                            RemHeatFromNetwork(Props.heatVent);
-                        else
-                        {
-                            //higher outdoor temp, push less heat out
-                            float heat = Props.heatVent * GenMath.LerpDoubleClamped(0, 100, 1, 0, map.mapTemperature.OutdoorTemp);
-                            RemHeatFromNetwork(heat);
-                        }
+                        //higher outdoor temp, push less heat out
+                        float heat = Props.heatVent * GenMath.LerpDoubleClamped(0, 100, 2.5f, 0, map.mapTemperature.OutdoorTemp);
+                        //Log.Message("Remove heat:" + heat);
+                        RemHeatFromNetwork(heat);
                     }
+
+                    if (myNet.venting)
+                        AddDepletionToNetwork(Props.heatVent);
+                    else if (!mapComp.InCombat && !mapComp.Cloaks.Any(c => c.active))
+                        RemoveDepletionFromNetwork(Props.heatVent / 5);
                 }
                 if (myNet.StorageUsed > 0)
                 {
-                    float ratio = RatioInNetwork();
-                    if (ratio > 0.90f)
+                    float ratio = myNet.RatioInNetwork;
+                    if (ratio > 0.7f)
                     {
-                        this.parent.TakeDamage(new DamageInfo(DamageDefOf.Burn, 10));
+                        FleckMaker.ThrowHeatGlow(parent.Position, parent.Map, parent.DrawSize.x * 0.5f * Mathf.Pow(ratio, 3));
+                        if (ratio > 0.9f)
+                            this.parent.TakeDamage(new DamageInfo(DamageDefOf.Burn, 10));
                     }
                     if (Props.antiEntropic) //convert heat
                     {
@@ -95,32 +109,65 @@ namespace RimWorld
                             if (batteries.Any())
                             {
                                 batteries.RandomElement().AddEnergy(2);
-                                RemHeatFromNetwork(Props.heatVent);
                             }
+                            RemHeatFromNetwork(Props.heatVent);
                         }
-                    }
-                    else if (inSpace && ShipInteriorMod2.ExposedToOutside(this.parent.GetRoom()))
                         return;
-                    else //push heat to room
-                    {
-                        if (RemHeatFromNetwork(Props.heatLoss))
-                            GenTemperature.PushHeat(this.parent, Props.heatLoss * HeatPushMult * ratio);
                     }
+                    PushHeat(ratio);
+                }
+            }
+            if (myNet.venting && Props.heatVent > 0 && this.parent.IsHashIntervalTick(25))
+            {
+                Mote obj = (Mote)ThingMaker.MakeThing(ResourceBank.ThingDefOf.Mote_HeatsinkPurge);
+                obj.exactPosition = parent.TrueCenter();
+                obj.instanceColor = new Color(UnityEngine.Random.Range(0f,0.420f),0,UnityEngine.Random.Range(0.69f,1f));
+                obj.rotationRate = 1.2f;
+                if(Rand.Chance(0.2f))
+                    ResourceBank.SoundDefOf.ShipPurgeHiss.PlayOneShot(parent);
+                GenSpawn.Spawn(obj, parent.Position, map);
+                RemHeatFromNetwork(Props.heatVent);
+                if (myNet.RatioInNetwork <= 0.01f)
+                    myNet.venting = false;
+            }
+        }
+        public void PushHeat(float ratio, float heat = 0) //bleed into or adjacent room
+        {
+            if (heat == 0)
+                heat = Props.heatLoss * HeatPushMult * ratio;
+            
+            if (parent.def.passability != Traversability.Impassable) //tanks
+            {
+                TryPushHeat(pos, heat);
+            }
+            else //sinks are walls, check adjacent
+            {
+                foreach (IntVec3 vec in GenAdj.CellsAdjacent8Way(parent).ToList())
+                {
+                    if (TryPushHeat(vec, heat))
+                        return;
                 }
             }
         }
-        private void IsDisabled()
+        private bool TryPushHeat(IntVec3 vec, float heat)
         {
-            if (!mapComp.InCombat && mapComp.Cloaks.Any(c => c.active))
+            //dont push to null, doors or space
+            Room r = vec.GetRoom(map);
+            if (r != null && !r.IsDoorway && !(inSpace && (r.OpenRoofCount > 0 || r.TouchesMapEdge)))
             {
-                Disabled = false;
+                if (RemHeatFromNetwork(Props.heatLoss))
+                {
+                    GenTemperature.PushHeat(vec, map, heat);
+                    //Log.Message("" + vec);
+                    return true;
+                }
             }
-            Disabled = false;
+            return false;
         }
         public override string CompInspectStringExtra()
         {
-            string toReturn = base.CompInspectStringExtra();// = "Stored heat: " + Mathf.Round(heatStored)+"/"+Props.heatCapacity;
-            if (Disabled)
+            string toReturn = base.CompInspectStringExtra();
+            if (disabled)
             {
                 toReturn += "\n<color=red>Cannot vent: Cloaked</color>";
             }

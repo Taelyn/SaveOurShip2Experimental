@@ -41,12 +41,12 @@ namespace RimWorld
         public CompEquippable GunCompEq => gun.TryGetComp<CompEquippable>();
         public override LocalTargetInfo CurrentTarget => currentTargetInt;
         public override Verb AttackVerb => GunCompEq.PrimaryVerb;
-
+        public override bool IsEverThreat => Faction == Faction.OfPlayer; //prevent player pawns auto attacking
         public bool Active
         {
             get
             {
-                if ((powerComp == null || powerComp.PowerOn))
+                if (heatComp.myNet != null && !heatComp.myNet.venting && (powerComp == null || powerComp.PowerOn))
                 {
                     return true;
                 }
@@ -136,17 +136,8 @@ namespace RimWorld
                 UpdateGunVerbs();
             }
         }
-
         public override void OrderAttack(LocalTargetInfo targ)
         {
-            if (forcedTarget != targ)
-            {
-                forcedTarget = targ;
-                if (burstCooldownTicksLeft <= 0)
-                {
-                    TryStartShootSomething(false);
-                }
-            }
             if (holdFire)
             {
                 Messages.Message(TranslatorFormattedStringExtensions.Translate("MessageTurretWontFireBecauseHoldFire", def.label), this, MessageTypeDefOf.RejectInput, historical: false);
@@ -178,8 +169,25 @@ namespace RimWorld
                     return;
                 }
             }
+            if (forcedTarget != targ)
+            {
+                forcedTarget = targ;
+                if (burstCooldownTicksLeft <= 0)
+                {
+                    TryStartShootSomething(false);
+                }
+            }
         }
-
+        public bool InRange(LocalTargetInfo target)
+        {
+            float range = Position.DistanceTo(target.Cell);
+            //Log.Message(range + " " + AttackVerb.verbProps.minRange);
+            if (range > AttackVerb.verbProps.minRange && range < AttackVerb.verbProps.range)
+            {
+                return true;
+            }
+            return false;
+        }
         public override void Tick()
         {
             base.Tick();
@@ -197,7 +205,7 @@ namespace RimWorld
             }
             if (GroundDefenseMode)
             {
-                if (forcedTarget.IsValid && !CanSetForcedTarget)
+                if (forcedTarget.IsValid && !CanSetForcedTarget && !InRange(forcedTarget))
                 {
                     ResetForcedTarget();
                 }
@@ -216,7 +224,7 @@ namespace RimWorld
                         }
                         else
                         {
-                            if (burstCooldownTicksLeft > 0)
+                            if (burstCooldownTicksLeft > 0 && !heatComp.Venting)
                             {
                                 burstCooldownTicksLeft--;
                             }
@@ -247,14 +255,26 @@ namespace RimWorld
                     {
                         return;
                     }
-                    else if (burstCooldownTicksLeft > 0)
+                    else if (burstCooldownTicksLeft > 0 && !heatComp.Venting)
                     {
                         burstCooldownTicksLeft--;
                     }
                     if (mapComp.InCombat)
                     {
+                        bool pdActive = false;
+                        if (heatComp.Props.pointDefense && this.IsHashIntervalTick(10) && burstCooldownTicksLeft <= 0)
+                        {
+                            pdActive = IncomingPtDefTargetsInRange();
+                            if (!PlayerControlled)
+                            {
+                                if (pdActive)
+                                    PointDefenseMode = true;
+                                else
+                                    PointDefenseMode = false;
+                            }
+                        }
                         //PD mode
-                        if ((this.IsHashIntervalTick(10) && burstCooldownTicksLeft <= 0 && IncomingPtDefTargetsInRange()) && (PointDefenseMode || (!PlayerControlled && heatComp.Props.pointDefense)))
+                        if (pdActive && PointDefenseMode)
                         {
                             if (Find.TickManager.TicksGame > mapComp.lastPDTick + 10 && !holdFire)
                                 BeginBurst();
@@ -317,7 +337,7 @@ namespace RimWorld
                     ResetCurrentTarget();
                     return;
                 }
-                if (forcedTarget.IsValid)
+                if (forcedTarget.IsValid && InRange(forcedTarget))
                 {
                     currentTargetInt = forcedTarget;
                 }
@@ -441,17 +461,13 @@ namespace RimWorld
                 return;
             }
             //if we do not have enough heatcap, vent heat to room/fail to fire in vacuum
-            if (!heatComp.AddHeatToNetwork(heatComp.Props.heatPerPulse * (1 + AmplifierDamageBonus) * 3))
+            if (heatComp.Props.heatPerPulse > 0 && !heatComp.AddHeatToNetwork(heatComp.Props.heatPerPulse * (1 + AmplifierDamageBonus) * 3))
             {
-                if (!GroundDefenseMode && ShipInteriorMod2.ExposedToOutside(this.GetRoom()))
-                {
-                    if (!PointDefenseMode && PlayerControlled)
-                        Messages.Message(TranslatorFormattedStringExtensions.Translate("CannotFireDueToHeat", Label), this, MessageTypeDefOf.CautionInput);
-                    shipTarget = LocalTargetInfo.Invalid;
-                    ResetCurrentTarget();
-                    return;
-                }
-                GenTemperature.PushHeat(this, heatComp.Props.heatPerPulse * (1 + AmplifierDamageBonus));
+                if (!PointDefenseMode && PlayerControlled)
+                    Messages.Message(TranslatorFormattedStringExtensions.Translate("CannotFireDueToHeat", Label), this, MessageTypeDefOf.CautionInput);
+                shipTarget = LocalTargetInfo.Invalid;
+                ResetCurrentTarget();
+                return;
             }
             //ammo
             if (fuelComp != null)
@@ -486,7 +502,7 @@ namespace RimWorld
             {
                 if (shipTarget == null)
                     shipTarget = LocalTargetInfo.Invalid;
-                if (PointDefenseMode || (!PlayerControlled && heatComp.Props.pointDefense))
+                if (PointDefenseMode)
                 {
                     currentTargetInt = MapEdgeCell(20);
                     mapComp.lastPDTick = Find.TickManager.TicksGame;
@@ -586,6 +602,8 @@ namespace RimWorld
         protected void BurstComplete()
         {
             burstCooldownTicksLeft = BurstCooldownTime().SecondsToTicks();
+            if (GroundDefenseMode)
+                burstCooldownTicksLeft = (int)(burstCooldownTicksLeft * 1.5f);
         }
 
         protected float BurstCooldownTime()
@@ -632,9 +650,9 @@ namespace RimWorld
                     int torpAM = 0;
                     foreach (ThingDef t in torpComp.LoadedShells)
                     {
-                        if (t == ThingDef.Named("ShipTorpedo_EMP"))
+                        if (t == ResourceBank.ThingDefOf.ShipTorpedo_EMP)
                             torpEMP++;
-                        else if (t == ThingDef.Named("ShipTorpedo_Antimatter"))
+                        else if (t == ResourceBank.ThingDefOf.ShipTorpedo_Antimatter)
                             torpAM++;
                         else
                             torp++;
@@ -659,7 +677,6 @@ namespace RimWorld
             top.DrawTurret(Vector3.zero,0);
             base.Draw();
         }
-
         public override void DrawExtraSelectionOverlays()
         {
             if (GroundDefenseMode)
@@ -783,32 +800,59 @@ namespace RimWorld
                 };
                 yield return command_Toggle;
             }
-            if (CanExtractTorpedo)
-            {
-                Command_Action command_Action = new Command_Action
-                {
-                    defaultLabel = TranslatorFormattedStringExtensions.Translate("CommandExtractShipTorpedo"),
-                    defaultDesc = TranslatorFormattedStringExtensions.Translate("CommandExtractShipTorpedoDesc"),
-                    icon = torpComp.LoadedShells[0].uiIcon,
-                    iconAngle = torpComp.LoadedShells[0].uiIconAngle,
-                    iconOffset = torpComp.LoadedShells[0].uiIconOffset,
-                    iconDrawScale = GenUI.IconDrawScale(torpComp.LoadedShells[0]),
-                    action = delegate
-                    {
-                        ExtractShells();
-                    }
-                };
-                yield return command_Action;
-            }
             if (torpComp != null)
             {
+                if (CanExtractTorpedo)
+                {
+                    Command_Action command_Action = new Command_Action
+                    {
+                        defaultLabel = TranslatorFormattedStringExtensions.Translate("CommandExtractShipTorpedo"),
+                        defaultDesc = TranslatorFormattedStringExtensions.Translate("CommandExtractShipTorpedoDesc"),
+                        icon = torpComp.LoadedShells[0].uiIcon,
+                        iconAngle = torpComp.LoadedShells[0].uiIconAngle,
+                        iconOffset = torpComp.LoadedShells[0].uiIconOffset,
+                        iconDrawScale = GenUI.IconDrawScale(torpComp.LoadedShells[0]),
+                        action = delegate
+                        {
+                            ExtractShells();
+                        }
+                    };
+                    yield return command_Action;
+                }
+                List<ThingDef> torpTypes = new List<ThingDef>();
+                foreach (ThingDef torp in torpComp.LoadedShells)
+                {
+                    if (!torpTypes.Contains(torp))
+                        torpTypes.Add(torp);
+                }
+                foreach (ThingDef torp in torpTypes)
+                {
+                    Command_Toggle command_Toggle = new Command_Toggle
+                    {
+                        defaultLabel = torp.label,
+                        defaultDesc = TranslatorFormattedStringExtensions.Translate("CommandShipTorpedoAllowedDesc"),
+                        icon = torp.uiIcon,
+                        iconAngle = torp.uiIconAngle,
+                        iconOffset = torp.uiIconOffset,
+                        iconDrawScale = GenUI.IconDrawScale(torp),
+                        toggleAction = delegate
+                        {
+                            if (torpComp.PreventShells.Contains(torp))
+                                torpComp.PreventShells.Remove(torp);
+                            else
+                                torpComp.PreventShells.Add(torp);
+                        },
+                        isActive = () => !torpComp.PreventShells.Contains(torp)
+                    };
+                    yield return command_Toggle;
+                }
                 StorageSettings storeSettings = torpComp.GetStoreSettings();
                 foreach (Gizmo item in StorageSettingsClipboard.CopyPasteGizmosFor(storeSettings))
                 {
                     yield return item;
                 }
             }
-            if (heatComp.Props.pointDefense)
+            else if (heatComp.Props.pointDefense)
             {
                 Command_Toggle command_Toggle = new Command_Toggle
                 {

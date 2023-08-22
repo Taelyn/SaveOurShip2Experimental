@@ -4,7 +4,7 @@
 	<DesignatorDropdownGroupDef>
 		<defName>Ship_Beams_Archotech</defName>
 	</DesignatorDropdownGroupDef>
-	<ThingDef ParentName="BuildingBase">
+	<ThingDef ParentName="BuildingShipHullBase">
 		<defName>Ship_BeamArchotech_Unpowered</defName>
 		<label>archotech ship hull (unpowered)</label>
 		<designatorDropdown>Ship_Beams_Archotech</designatorDropdown>
@@ -29,29 +29,20 @@
 			</damageData>
 		</graphicData>
 		<uiIconPath>Things/Building/Ship/ShipBeam_Archotech_UI2</uiIconPath>
-		<altitudeLayer>Building</altitudeLayer>
-		<passability>Impassable</passability>
-		<blockWind>true</blockWind>
-		<castEdgeShadows>true</castEdgeShadows>
-		<fillPercent>1</fillPercent>
-		<blockLight>true</blockLight>
-		<canOverlapZones>false</canOverlapZones>
 		<statBases>
 			<WorkToBuild>1600</WorkToBuild>
 			<MaxHitPoints>1500</MaxHitPoints>
 			<Flammability>0</Flammability>
 			<Beauty>1</Beauty>
 		</statBases>
-		<tickerType>Normal</tickerType>
 		<description>The outer structural elements of an archotech-designed ship's hull. Does not include conduits for power or coolant.</description>
 		<placingDraggableDimensions>1</placingDraggableDimensions>
 		<comps>
 			<li Class="CompProperties_SoShipPart">
 				<isHull>true</isHull>
 				<hermetic>true</hermetic>
-			</li>
-			<li Class="CompProperties_RoofMe">
 				<archotech>true</archotech>
+				<roof>true</roof>
 			</li>
 			<li Class="CompProperties_SoSUnlock">
 				<unlock>ArchotechUplink</unlock>
@@ -66,6 +57,7 @@
 			<blueprintGraphicData>
 				<texPath>Things/Building/Linked/Wall_Blueprint_Atlas</texPath>
 			</blueprintGraphicData>
+			<paintable>true</paintable>
 		</building>
 		<costList>
 			<Steel>13</Steel>
@@ -73,17 +65,10 @@
 			<ComponentIndustrial>1</ComponentIndustrial>
 			<Gold>10</Gold>
 		</costList>
-		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
-		<staticSunShadowHeight>1.0</staticSunShadowHeight>
 		<designationHotKey>Misc1</designationHotKey>
-		<holdsRoof>true</holdsRoof>
-		<leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
-		<killedLeavings>
-			<ChunkSlagSteel>1</ChunkSlagSteel>
-		</killedLeavings>
 		<designationCategory>Ship</designationCategory>
 	</ThingDef>
-	<ThingDef ParentName="BuildingBase">
+	<ThingDef ParentName="BuildingShipHullBase">
 		<defName>Ship_BeamArchotech</defName>
 		<label>archotech ship hull</label>
 		<designatorDropdown>Ship_Beams_Archotech</designatorDropdown>
@@ -108,33 +93,28 @@
 			</damageData>
 		</graphicData>
 		<uiIconPath>Things/Building/Ship/ShipBeam_Archotech_UI</uiIconPath>
-		<altitudeLayer>Building</altitudeLayer>
-		<passability>Impassable</passability>
-		<blockWind>true</blockWind>
-		<castEdgeShadows>true</castEdgeShadows>
-		<fillPercent>1</fillPercent>
-		<blockLight>true</blockLight>
-		<canOverlapZones>false</canOverlapZones>
 		<statBases>
 			<WorkToBuild>1600</WorkToBuild>
 			<MaxHitPoints>1500</MaxHitPoints>
 			<Flammability>0</Flammability>
 			<Beauty>1</Beauty>
 		</statBases>
-		<tickerType>Normal</tickerType>
-		<description>The outer structural elements of an archotech-designed ship's hull. Includes conduits for power and coolant.</description>
+		<description>The outer structural elements of an archotech-designed ship's hull. Includes conduits for power and coolant. Integrated lighting system can be toggled at will if the Advanced Lighting research project is completed.</description>
 		<placingDraggableDimensions>1</placingDraggableDimensions>
 		<comps>
 			<li Class="CompProperties_SoShipPart">
 				<isHull>true</isHull>
 				<hermetic>true</hermetic>
+				<archotech>true</archotech>
+				<roof>true</roof>
+				<canLight>true</canLight>
+				<light>Ship_Beam_Light_Archo</light>
+				<lightPower>5</lightPower>
+				<sunLightPower>1000</sunLightPower>
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTransmitter</compClass>
 				<transmitsPower>true</transmitsPower>
-			</li>
-			<li Class="CompProperties_RoofMe">
-				<archotech>true</archotech>
 			</li>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
@@ -152,6 +132,7 @@
 			<blueprintGraphicData>
 				<texPath>Things/Building/Linked/Wall_Blueprint_Atlas</texPath>
 			</blueprintGraphicData>
+			<paintable>true</paintable>
 		</building>
 		<costList>
 			<Steel>15</Steel>
@@ -159,15 +140,61 @@
 			<ComponentIndustrial>1</ComponentIndustrial>
 			<Gold>10</Gold>
 		</costList>
-		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
-		<staticSunShadowHeight>1.0</staticSunShadowHeight>
 		<designationHotKey>Misc1</designationHotKey>
-		<holdsRoof>true</holdsRoof>
-		<leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
-		<killedLeavings>
-			<ChunkSlagSteel>1</ChunkSlagSteel>
-		</killedLeavings>
 		<designationCategory>Ship</designationCategory>
+	</ThingDef>
+	
+	<ThingDef ParentName="BuildingBase">
+		<defName>Ship_Beam_Light_Archo</defName>
+		<label>ship light</label>
+		<thingClass>Building</thingClass>
+		<graphicData>
+			<texPath>Things/Building/Ship/HullPlateTransparent</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+		</graphicData>
+		<statBases>
+			<Flammability>0</Flammability>
+		</statBases>
+		<building>
+			<isEdifice>false</isEdifice>
+			<shipPart>true</shipPart>
+		</building>
+		<rotatable>false</rotatable>
+		<destroyable>false</destroyable>
+		<useHitPoints>false</useHitPoints>
+		<selectable>false</selectable>
+		<neverMultiSelect>true</neverMultiSelect>
+		<description>Integrated lighting attached to a ship's hull.</description>
+		<altitudeLayer>BuildingOnTop</altitudeLayer>
+		<comps>
+			<li Class="CompProperties_ShipLight">
+				<lightGraphic>
+					<texPath>Things/Building/Ship/ShipWallLightArcho</texPath>
+					<graphicClass>Graphic_Multi</graphicClass>
+					<drawSize>1</drawSize>
+					<shaderType>Cutout</shaderType>
+				</lightGraphic>
+				<sunLightGraphic>
+					<texPath>Things/Building/Ship/ShipSunLight</texPath>
+					<graphicClass>Graphic_Multi</graphicClass>
+					<drawSize>1</drawSize>
+					<shaderType>Cutout</shaderType>
+				</sunLightGraphic>
+				<lightRadius>14</lightRadius>
+				<overlightRadius>14</overlightRadius>
+			</li>
+			<li Class="CompProperties_Power">
+				<compClass>CompSoSPowerTrader</compClass>
+				<basePowerConsumption>5</basePowerConsumption>
+			</li>
+		    <li Class="CompProperties_Schedule">
+			  <compClass>CompSoSSchedule</compClass>
+			  <startTime>0.25</startTime>
+			  <endTime>0.8</endTime>
+			  <offMessage>Off for plant resting period</offMessage>
+		    </li>
+		</comps>
+		<tickerType>Rare</tickerType>
 	</ThingDef>
 	<!-- corners -->
 	<ThingDef ParentName="ShipCornerBase" Name="ShipCornerArchotech" Abstract="True">
@@ -184,6 +211,10 @@
 				<compClass>CompColorable</compClass>
 			</li>
 		</comps>
+		<building>
+			<shipPart>true</shipPart>
+			<paintable>true</paintable>
+		</building>
 		<designationCategory>Ship</designationCategory>
 	</ThingDef>
 	<ThingDef ParentName="ShipCornerArchotech">
@@ -285,7 +316,7 @@
 		<size>(1,3)</size>
 	</ThingDef>
 	<!-- hull misc -->
-	<ThingDef ParentName="BuildingBase">
+	<ThingDef ParentName="BuildingShipHullBase">
 		<defName>ShipInside_SolarGeneratorArchotech</defName>
 		<label>archotech solar generator</label>
 		<designatorDropdown>Ship_SolarGenerators</designatorDropdown>
@@ -313,14 +344,6 @@
 		</graphicData>
 		<uiIconPath>Things/Building/Ship/BeamSolarUI_archotech</uiIconPath>
 		<rotatable>true</rotatable>
-		<altitudeLayer>Building</altitudeLayer>
-		<passability>Impassable</passability>
-		<holdsRoof>true</holdsRoof>
-		<blockWind>true</blockWind>
-		<fillPercent>1</fillPercent>
-		<blockLight>true</blockLight>
-		<canOverlapZones>false</canOverlapZones>
-		<castEdgeShadows>true</castEdgeShadows>
 		<tickerType>Normal</tickerType>
 		<statBases>
 			<WorkToBuild>8000</WorkToBuild>
@@ -339,14 +362,14 @@
 			<blueprintGraphicData>
 				<texPath>Things/Building/Linked/Wall_Blueprint_Atlas</texPath>
 			</blueprintGraphicData>
+			<paintable>true</paintable>
 		</building>
 		<comps>
 			<li Class="CompProperties_SoShipPart">
 				<isHull>true</isHull>
 				<hermetic>true</hermetic>
-			</li>
-			<li Class="CompProperties_RoofMe">
 				<archotech>true</archotech>
+				<roof>true</roof>
 			</li>
 			<li Class="CompProperties_PowerPlantSolarShip">
 				<compClass>CompPowerPlantSolarShip</compClass>
@@ -376,16 +399,11 @@
 		<placeWorkers>
 			<li>PlaceWorker_SolarShip</li>
 		</placeWorkers>
-		<terrainAffordanceNeeded>Medium</terrainAffordanceNeeded>
 		<designationCategory>Ship</designationCategory>
 		<designationHotKey>Misc5</designationHotKey>
 		<constructionSkillPrerequisite>6</constructionSkillPrerequisite>
-		<leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
-		<killedLeavings>
-			<ChunkSlagSteel>1</ChunkSlagSteel>
-		</killedLeavings>
 	</ThingDef>
-	<ThingDef ParentName="BuildingBase">
+	<ThingDef ParentName="BuildingShipHullBase">
 		<defName>ShipInside_PassiveVentArchotech</defName>
 		<label>archotech ship vent</label>
 		<designatorDropdown>Ship_Vents</designatorDropdown>
@@ -415,14 +433,6 @@
 		<uiIconPath>Things/Building/Ship/BeamVentUI</uiIconPath>
 		<size>(1,1)</size>
 		<rotatable>true</rotatable>
-		<altitudeLayer>Building</altitudeLayer>
-		<passability>Impassable</passability>
-		<blockWind>true</blockWind>
-		<holdsRoof>true</holdsRoof>
-		<fillPercent>1</fillPercent>
-		<blockLight>true</blockLight>
-		<canOverlapZones>false</canOverlapZones>
-		<castEdgeShadows>true</castEdgeShadows>
 		<tickerType>Rare</tickerType>
 		<statBases>
 			<WorkToBuild>4000</WorkToBuild>
@@ -446,6 +456,8 @@
 			<li Class="CompProperties_SoShipPart">
 				<isHull>true</isHull>
 				<hermetic>true</hermetic>
+				<archotech>true</archotech>
+				<roof>true</roof>
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTrader</compClass>
@@ -459,9 +471,6 @@
 			<li Class="CompProperties_Overlay">
 				<graphicPath>Things/Building/Ship/Ship_Vent</graphicPath>
 				<size>(1,1,1)</size>
-			</li>
-			<li Class="CompProperties_RoofMe">
-				<archotech>true</archotech>
 			</li>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
@@ -481,11 +490,8 @@
 			<blueprintGraphicData>
 				<texPath>Things/Building/Linked/Wall_Blueprint_Atlas</texPath>
 			</blueprintGraphicData>
+			<paintable>true</paintable>
 		</building>
-		<leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
-		<killedLeavings>
-			<ChunkSlagSteel>1</ChunkSlagSteel>
-		</killedLeavings>
 	</ThingDef>
 	<ThingDef ParentName="BuildingBase">
 		<defName>ShipAirlockArchotech</defName>
@@ -517,7 +523,10 @@
 		<comps>
 			<li Class="CompProperties_SoShipPart">
 				<isHull>true</isHull>
+				<isPlating>true</isPlating>
 				<hermetic>true</hermetic>
+				<archotech>true</archotech>
+				<roof>true</roof>
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTrader</compClass>
@@ -525,9 +534,6 @@
 				<transmitsPower>true</transmitsPower>
 			</li>
 			<li Class="CompProperties_Forbiddable"/>
-			<li Class="CompProperties_RoofMe">
-				<archotech>true</archotech>
-			</li>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
 			</li>
@@ -550,6 +556,9 @@
 			</li>
 		</comps>
 		<designationHotKey>Misc2</designationHotKey>
+		<placeWorkers>
+			<li>PlaceWorker_ShipHull</li>
+		</placeWorkers>
 		<statBases>
 			<WorkToBuild>1200</WorkToBuild>
 			<MaxHitPoints>1000</MaxHitPoints>
@@ -577,6 +586,7 @@
 			</blueprintGraphicData>
 			<blueprintClass>Blueprint_Door</blueprintClass>
 			<roamerCanOpen>false</roamerCanOpen>
+			<paintable>true</paintable>
 		</building>
 		<leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
 	</ThingDef>
@@ -623,9 +633,8 @@
 			<li Class="CompProperties_SoShipPart">
 				<isPlating>true</isPlating>
 				<hermetic>true</hermetic>
-			</li>
-			<li Class="CompProperties_RoofMe">
 				<archotech>true</archotech>
+				<roof>true</roof>
 			</li>
 			<li Class="CompProperties_SoSUnlock">
 				<unlock>ArchotechUplink</unlock>
@@ -635,7 +644,7 @@
 			</li>
 		</comps>
 		<placeWorkers>
-			<li>PlaceWorker_ShipHull</li>
+			<li>PlaceWorker_ShipPlating</li>
 		</placeWorkers>
 		<rotatable>false</rotatable>
 		<selectable>false</selectable>
@@ -649,7 +658,7 @@
 		<designationCategory>Ship</designationCategory>
 	</ThingDef>
 	<!-- misc -->
-	<ThingDef ParentName="BuildingBase">
+	<ThingDef ParentName="BuildingShipBase">
 		<defName>Ship_Engine_Archotech</defName>
 		<label>antimatter thruster</label>
 		<designatorDropdown>Ship_Engines</designatorDropdown>
@@ -663,13 +672,6 @@
 		<researchPrerequisites>
 			<li>ArchotechEngine</li>
 		</researchPrerequisites>
-		<altitudeLayer>Building</altitudeLayer>
-		<passability>Impassable</passability>
-		<blockWind>true</blockWind>
-		<castEdgeShadows>true</castEdgeShadows>
-		<fillPercent>1</fillPercent>
-		<blockLight>true</blockLight>
-		<canOverlapZones>false</canOverlapZones>
 		<statBases>
 			<WorkToBuild>40000</WorkToBuild>
 			<MaxHitPoints>3000</MaxHitPoints>
@@ -722,8 +724,6 @@
 			<Uranium>50</Uranium>
 			<ComponentSpacer>24</ComponentSpacer>
 		</costList>
-		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
-		<staticSunShadowHeight>1.0</staticSunShadowHeight>
 		<designationHotKey>Misc5</designationHotKey>
 	</ThingDef>
 	<ThingDef ParentName="BuildingBase">
@@ -818,12 +818,12 @@
 	<ThingDef ParentName="ShipHeatsinkBase">
 		<defName>ShipHeatsinkAntiEntropy</defName>
 		<label>anti-entropic heatbank</label>
-		<description>An advanced heatbank designed by an archotech. Uses exotic physics to convert excess heat back into usable energy.\n\nHeat capacity: 200Hu\nHeat conversion: 4Hu/s to 1kW/s</description>
+		<description>An advanced heatbank designed by an archotech. Uses exotic physics to convert excess heat back into usable energy.\n\nHeat capacity: 200Hu\nHeat conversion: 5Hu/s to 1kW/s</description>
 		<size>(2,2)</size>
 		<graphicData>
 			<texPath>Things/Building/Ship/HeatbankAntiEntropic</texPath>
 			<graphicClass>Graphic_Single</graphicClass>
-			<drawSize>(2,4)</drawSize>
+			<drawSize>(2,2)</drawSize>
 		</graphicData>
 		<building>
 		</building>
@@ -843,7 +843,7 @@
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeatSink</compClass>
 				<heatCapacity>200</heatCapacity>
-				<heatVent>8</heatVent>
+				<heatVent>10</heatVent>
 				<threat>3</threat>
 				<antiEntropic>true</antiEntropic>
 			</li>
@@ -860,7 +860,7 @@
 		<defName>ArchotechShieldGenerator</defName>
 		<label>archotech shield generator</label>
 		<designatorDropdown>Ship_Shields</designatorDropdown>
-		<description>A shielding device which projects a momentum repulsor field. Shots can go out, but not in.\n\nGenerates 75% of a standard shield's heat when it blocks attacks. If no heatsink capacity is available, the shield will be damaged and require repairs.\n\nShip radiators cannot disperse heat while shields are up. Captains are advised to drop shields once heatsinks are close to capacity, or risk their ships turning into ovens.</description>
+		<description>An advanced shielding device which projects a momentum repulsor field. Shots can go out, but not in.\n\nGenerates 75% of a standard shield's heat when it blocks attacks. If no heatsink capacity is available, the shield will be damaged and require repairs.\n\nCaptains are advised to drop shields once coolant reaches very high temperature, or risk heatsink damage.</description>
 		<size>(3,3)</size>
 		<receivesSignals>true</receivesSignals>
 		<statBases>
@@ -1244,12 +1244,13 @@
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
 				<heatPerPulse>140</heatPerPulse>
-				<energyToFire>4800</energyToFire>
+				<energyToFire>2400</energyToFire>
 				<optRange>150</optRange>
 				<maxRange>150</maxRange>
 				<projectileSpeed>10</projectileSpeed>
 				<singleFireSound>ShipCombatLaser</singleFireSound>
 				<threat>100</threat>
+				<laserColor>(0,255,0)</laserColor>
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTrader</compClass>
@@ -1270,7 +1271,7 @@
 			<shipPart>true</shipPart>
 			<turretGunDef>ShipTurret_SpinalMountTopPsychic</turretGunDef>
 			<turretBurstWarmupTime>2</turretBurstWarmupTime>
-			<turretBurstCooldownTime>45.0</turretBurstCooldownTime>
+			<turretBurstCooldownTime>90.0</turretBurstCooldownTime>
 		</building>
 	</ThingDef>
 	<ThingDef ParentName="BaseShipArtilleryWeapon">
@@ -1386,7 +1387,7 @@
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
 				<heatPerPulse>140</heatPerPulse>
-				<energyToFire>4800</energyToFire>
+				<energyToFire>2400</energyToFire>
 				<optRange>150</optRange>
 				<maxRange>250</maxRange>
 				<projectileSpeed>3</projectileSpeed>
@@ -1411,7 +1412,7 @@
 			<shipPart>true</shipPart>
 			<turretGunDef>ShipTurret_SpinalMountTopMechanite</turretGunDef>
 			<turretBurstWarmupTime>2</turretBurstWarmupTime>
-			<turretBurstCooldownTime>45.0</turretBurstCooldownTime>
+			<turretBurstCooldownTime>90.0</turretBurstCooldownTime>
 		</building>
 	</ThingDef>
 	<ThingDef ParentName="BaseShipArtilleryWeapon">
@@ -1495,7 +1496,7 @@
 		<impactSoundType>Blunt</impactSoundType>
 		<armorCategory>Sharp</armorCategory>
 		<minDamageToFragment>15</minDamageToFragment>
-		<defaultDamage>4</defaultDamage>
+		<defaultDamage>135</defaultDamage>
 		<defaultStoppingPower>0.5</defaultStoppingPower>
 		<defaultArmorPenetration>0.10</defaultArmorPenetration>
 		<buildingDamageFactor>1</buildingDamageFactor>
@@ -1748,7 +1749,7 @@
 		</fixedIngredientFilter>
 	</RecipeDef>
 	<!-- obsolete -->
-	<ThingDef ParentName="BuildingBase">
+	<ThingDef ParentName="BuildingShipHullBase">
 		<defName>ShipInside_PassiveCoolerArchotech</defName>
 		<label>archotech ship radiator</label>
 		<description>Vents heat into the void at a physically-implausible rate, rapidly cooling a ship's interior. Also provides a small amount of heat capacity to weapons and shields. Cannot vent heat while shields or cloaking devices are active.</description>
@@ -1777,14 +1778,6 @@
 		<uiIconPath>Things/Building/Ship/BeamRadiatorArchotechUI</uiIconPath>
 		<size>(1,1)</size>
 		<rotatable>true</rotatable>
-		<altitudeLayer>Building</altitudeLayer>
-		<passability>Impassable</passability>
-		<blockWind>true</blockWind>
-		<holdsRoof>true</holdsRoof>
-		<fillPercent>1</fillPercent>
-		<blockLight>true</blockLight>
-		<canOverlapZones>false</canOverlapZones>
-		<castEdgeShadows>true</castEdgeShadows>
 		<tickerType>Normal</tickerType>
 		<statBases>
 			<WorkToBuild>8000</WorkToBuild>
@@ -1828,7 +1821,6 @@
 				<graphicPath>Things/Building/Ship/RadiatorVent</graphicPath>
 				<size>(1,1,1)</size>
 			</li>
-			<li Class="CompProperties_RoofMe"/>
 			<li Class="CompProperties_ShipHeat">
 			</li>
 			<li Class="CompProperties_SoSUnlock">
@@ -1845,9 +1837,5 @@
 				<texPath>Things/Building/Linked/Wall_Blueprint_Atlas</texPath>
 			</blueprintGraphicData>
 		</building>
-		<leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
-		<killedLeavings>
-			<ChunkSlagSteel>1</ChunkSlagSteel>
-		</killedLeavings>
 	</ThingDef>
 </Defs>

@@ -18,7 +18,7 @@ namespace RimWorld
             {
                 yield return gizmo;
             }
-            if (myNet == null)
+            if (myNet == null || this.parent.Faction != Faction.OfPlayer)
                 yield break;
             HashSet<Def> defs = new HashSet<Def>();
             foreach (var t in myNet.Turrets)
@@ -66,7 +66,7 @@ namespace RimWorld
                 };
                 yield return toggleShields;
             }
-            if (myNet.Turrets.NullOrEmpty())
+            if (!myNet.Turrets.Any())
                 yield break;
             if (myNet.Turrets.Any(t => ((Building_ShipTurret)t.parent).holdFire == false))
                 HoldFire = false;

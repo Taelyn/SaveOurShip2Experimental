@@ -29,8 +29,16 @@ namespace RimWorld
             {
                 return Props.threat;
             }
-        } 
-
+        }
+        public bool Venting
+        {
+            get
+            {
+                if (myNet != null)
+                    return myNet.venting;
+                return false;
+            }
+        }
         public void PrintForGrid(SectionLayer layer)
         {
             ShipHeatOverlay.Print(layer, (Thing)(object)base.parent, 0);
@@ -41,9 +49,11 @@ namespace RimWorld
             if (myNet != null)
             {
                 output += TranslatorFormattedStringExtensions.Translate("ShipHeatStored", Mathf.Round(myNet.StorageUsed), myNet.StorageCapacity);
+                if (myNet.RatioInNetwork > 0.9f)
+                    output += "\n<color=red>DANGER! Heat level critical!</color>";
                 if (Prefs.DevMode)
                 {
-                    output += "\nGrid:" + myNet.GridID + " Ratio:" + RatioInNetwork().ToString("F2") + "Temp: " + Mathf.Lerp(0, 200, RatioInNetwork()).ToString("F0");
+                    output += "\nGrid:" + myNet.GridID + " Ratio:" + myNet.RatioInNetwork.ToString("F2") + " Depl ratio:" + myNet.DepletionRatio.ToString("F2") + "Temp: " + Mathf.Lerp(0, 200, myNet.RatioInNetwork).ToString("F0");
                 }
             }
             else
@@ -78,18 +88,19 @@ namespace RimWorld
             myNet.RemoveHeat(amount);
             return true;
         }
+        public void AddDepletionToNetwork(float amount)
+        {
+            if (myNet != null)
+                myNet.AddDepletion(amount);
+        }
+        public void RemoveDepletionFromNetwork(float amount)
+        {
+            if (myNet != null)
+                myNet.RemoveDepletion(amount);
+        }
         public float AvailableCapacityInNetwork()
         {
             return myNet.StorageCapacity - myNet.StorageUsed;
-        }
-        public float RatioInNetwork()
-        {
-            if (myNet == null || myNet.StorageCapacity == 0)
-            {
-                //Log.Error("Null heatnet for " + parent);
-                return 0;
-            }
-            return myNet.StorageUsed / myNet.StorageCapacity;
         }
         public override void PostSpawnSetup(bool respawningAfterLoad)
         {
@@ -107,6 +118,10 @@ namespace RimWorld
             //td change to check for adj nets, if at end of line simple remove, else regen
             mapComp.cachedPipes.Remove(this);
             mapComp.heatGridDirty = true;
+        }
+        public override void PostExposeData()
+        {
+            base.PostExposeData();
         }
     }
 }

@@ -48,8 +48,13 @@
 	<ShipInsideMoveRot>Rotate ship</ShipInsideMoveRot>
 	<ShipInsideMoveRotNo>Ship has non-rotatable, non-even sided buildings!</ShipInsideMoveRotNo>
 	<ShipInsideMoveRotDesc>Rotate the ship counter clockwise</ShipInsideMoveRotDesc>
+	<ShipInsideMoveFailRCS>Not enough RCS thrusters to move ship, required {0}</ShipInsideMoveFailRCS>
+	<ShipInsideMoveFailFuel>Not enough fuel to move ship, required {0} fuel</ShipInsideMoveFailFuel>
+	<ShipInsideMoveFailPilot>Ship requires a pilot to move.</ShipInsideMoveFailPilot>
 	<ShipInsideLand>Land ship</ShipInsideLand>
 	<ShipInsideLandDesc>Land this ship near </ShipInsideLandDesc>
+	<ShipInsideToggleEngines>Engage ship engines</ShipInsideToggleEngines>
+	<ShipInsideToggleEnginesDesc>Engage ship engines to clear hazards.</ShipInsideToggleEnginesDesc>
 	<ShipMoveDesc>Deselect to confirm location</ShipMoveDesc>
 	<ShipCombatEscape>Escape combat</ShipCombatEscape>
 	<ShipCombatEscapeDesc>Flee from battle, leaving behind anyone aboard the enemy ship</ShipCombatEscapeDesc>
@@ -83,17 +88,19 @@
 	<ShipInsideReturnShipDesc>Move this ship back to your stable orbit</ShipInsideReturnShipDesc>
 	<ShipInsideCaptureShip>Capture</ShipInsideCaptureShip>
 	<ShipInsideCaptureShipDesc>Move this ship to your map</ShipInsideCaptureShipDesc>
-	<ShipMoveFailPawns>Non player pawns found on ship, takeoff aborted.</ShipMoveFailPawns>
+	<ShipLaunchFailPawns>Non player pawns found on ship, takeoff aborted.</ShipLaunchFailPawns>
+	<ShipMoveFailPawns>Player pawn in {0}, ship move aborted.</ShipMoveFailPawns>
 	<ShipMoveWreckCommand>Move wreck</ShipMoveWreckCommand>
 	<ShipMoveWreckCommandDesc>Reposition a wreck on your map</ShipMoveWreckCommandDesc>
 	<ShipMoveWreckFlipCommand>Flip wreck</ShipMoveWreckFlipCommand>
 	<ShipMoveWreckFlipCommandDesc>Reposition and flip a wreck on your map</ShipMoveWreckFlipCommandDesc>
 	<ShipMoveWreckRotCommand>Rotate wreck</ShipMoveWreckRotCommand>
-	<ShipMoveWreckRotCommandDesc>Reposition and rotate a wreck clockwise on your map</ShipMoveWreckRotCommandDesc>
+	<ShipMoveWreckRotCommandDesc>Reposition and rotate a wreck counter clockwise on your map</ShipMoveWreckRotCommandDesc>
 	<ShipSalvageCommand>Retrieve wreck</ShipSalvageCommand>
 	<ShipSalvageCommandDesc>Retrieve a wreck from target ship</ShipSalvageCommandDesc>
-	<ShipSalvageDisabled>Disabled while in battle</ShipSalvageDisabled>
-	<ShipSalvageBridge>Can not salvage intact ships, capture or destroy the bridge.</ShipSalvageBridge>
+	<ShipSalvageDisabled>In ship battle or enemy pawns present!</ShipSalvageDisabled>
+	<ShipSalvageAbandonConfirm>Are you sure you want to discard the target?\nEverything connected to it will burn up in the atmosphere!</ShipSalvageAbandonConfirm>
+	<ShipSalvageBridge>Can not move intact ships with the salvage bay, capture or destroy the bridge.</ShipSalvageBridge>
 	<ShipSalvageCount>Not enough salvage bays. {0}/{1}</ShipSalvageCount>
 	<ShipClaimWrecksCommand>Claim wrecks</ShipClaimWrecksCommand>
 	<ShipClaimWrecksCommandDesc>Claim all wrecks on this map</ShipClaimWrecksCommandDesc>
@@ -114,6 +121,7 @@
 	<CommandShipOptimalRangeDesc>Enable to only fire on targets within optimal range</CommandShipOptimalRangeDesc>
 	<CommandShipPointDefense>Point Defense mode</CommandShipPointDefense>
 	<CommandShipPointDefenseDesc>Use this turret to intercept incoming torpedoes and shuttles</CommandShipPointDefenseDesc>
+	<CommandShipTorpedoAllowedDesc>Toggle to prevent or allow firing of this type of torpedo.</CommandShipTorpedoAllowedDesc>
 	<ShipCombatPodDestroyedPlayer>Your shuttle was destroyed by enemy point defense!</ShipCombatPodDestroyedPlayer>
 	<ShipCombatPodDestroyedEnemy>Enemy shuttle was destroyed by your point defense!</ShipCombatPodDestroyedEnemy>
 	
@@ -217,7 +225,21 @@
 	<SoSEmergencyJTNear>Emergency boost (close range)</SoSEmergencyJTNear>
 	<SoSEmergencyJTNearDesc>Use your Johnson-Tanaka drive to immediately reach close range. This costs {0}Wd of energy and will require repairs to the drive.</SoSEmergencyJTNearDesc>
 	
-	<CannotUseCloakEnabled>Cannot use with Cloak Enabled</CannotUseCloakEnabled>
-	<ShipInsideToggleDock>Toggle Docking Arm</ShipInsideToggleDock>
-	<ShipInsideToggleDockDesc>Extend or Withdraw the docking arm.</ShipInsideToggleDockDesc>
+	<ArcholifeChangeSkin>Change animal appearance</ArcholifeChangeSkin>
+	<ArcholifeChangeSkinDesc>This creature seems able to change shape at will, but only between a few discrete forms.</ArcholifeChangeSkinDesc>
+	<ShipWallLight>Toggle lighting</ShipWallLight>
+	<ShipWallLightDesc>Toggle this ship part's integrated lighting system</ShipWallLightDesc>
+	<ShipWallLightRotate>Rotate lighting</ShipWallLightRotate>
+	<ShipWallLightRotateDesc>Rotate this ship part's integrated lighting system</ShipWallLightRotateDesc>
+	<ShipWallLightSun>Sun Mode</ShipWallLightSun>
+	<ShipWallLightSunDesc>Toggle a special high-power lighting mode designed for hydroponics bays</ShipWallLightSunDesc>
+	<ShipWallLightColor>Lighting color</ShipWallLightColor>
+	<ShipWallLightColorDesc>Select a color for this ship part's lighting</ShipWallLightColorDesc>
+	<ShipWallLightDisco>Disco Mode</ShipWallLightDisco>
+	<ShipWallLightDiscoDesc>Set this light to cycle through the color spectrum</ShipWallLightDiscoDesc>
+	<ShipWallLightAdjacency>No adjacent rooms</ShipWallLightAdjacency>
+	<ShipHeatPurge>Vent coolant</ShipHeatPurge>
+	<ShipHeatPurgeDesc>Begin venting heat from heatsinks. All shields, weapons, and cloaks on this heat network will shut down, and heatsinks will vent heat five times as quickly.\n\nThis process depletes coolant and reduces the overall capacity of the heat network, and cannot be canceled once it has begun. Outside of combat, depleted capacity will slowly recover.</ShipHeatPurgeDesc>
+	<ShipHeatPurgeVenting>Already venting</ShipHeatPurgeVenting>
+	<ShipHeatPurgeNotEnough>Not enough heat in network for purge</ShipHeatPurgeNotEnough>
 </LanguageData>

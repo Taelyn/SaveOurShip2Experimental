@@ -9,6 +9,8 @@
     <AssemblyName>ShipsHaveInsides</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
@@ -52,37 +54,37 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>E:\Steam\steamapps\workshop\content\294100\2009463077\Current\Assemblies\0Harmony.dll</HintPath>
+      <HintPath>..\..\..\2009463077 Harmony\Current\Assemblies\0Harmony.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Assembly-CSharp">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.IMGUIModule">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.TextCoreModule">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.TextCoreModule.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.TextCoreModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
@@ -106,10 +108,24 @@
     <Compile Include="Building\Building_ShipTurret.cs" />
     <Compile Include="Building\Building_ShipTurretTorpedo.cs" />
     <Compile Include="Building\Building_ShipVent.cs" />
+    <Compile Include="Building\Building_SpaceCrib.cs" />
     <Compile Include="ArrivalAction\CaravanArrivalAction_VisitTribalPillarSite.cs" />
     <Compile Include="ArrivalAction\CaravanArrivalAction_VisitInsectPillarSite.cs" />
     <Compile Include="ArrivalAction\CaravanArrivalAction_VisitImpactSite.cs" />
     <Compile Include="ArrivalAction\TransportPodsArrivalAction_ShipAssault.cs" />
+    <Compile Include="ChoiceLetter_SpacePodEncounter.cs" />
+    <Compile Include="CompProps\CompProperties_SoShipDocking.cs" />
+    <Compile Include="CompProps\CompProperties_RCSThruster.cs" />
+    <Compile Include="Comp\CompSoShipDocking.cs" />
+    <Compile Include="GameCondition_SpaceDebris.cs" />
+    <Compile Include="HarmonyPatches.cs" />
+    <Compile Include="IncidentWorker_SpaceDebris.cs" />
+    <Compile Include="Jobs\JobDriver_LoadShipBuilding.cs" />
+    <Compile Include="Jobs\JobGiver_LoadShipBuilding.cs" />
+    <Compile Include="PlaceWorker\PlaceWorker_ShipPlating.cs" />
+    <Compile Include="Projectile\Projectile_ExplosiveShipDebris.cs" />
+    <Compile Include="Quest\QuestNode_RoyalAscentShip.cs" />
+    <Compile Include="Quest\QuestPart_RoyalAscentShip.cs" />
     <Compile Include="ResourceBank.cs" />
     <Compile Include="CompProps\CompProperties_HologramRemover.cs" />
     <Compile Include="Comp\CompHologramRemover.cs" />
@@ -121,6 +137,7 @@
     <Compile Include="CompProps\CompProperties_SalvageBay.cs" />
     <Compile Include="Comp\CompAICrewmate.cs" />
     <Compile Include="Comp\CompArchoHullConversion.cs" />
+    <Compile Include="Comp\CompArcholifeCosmetics.cs" />
     <Compile Include="Comp\CompBecomeBuilding.cs" />
     <Compile Include="Comp\CompBecomePawn.cs" />
     <Compile Include="Comp\CompBlackBoxConsole.cs" />
@@ -142,6 +159,7 @@
     <Compile Include="Comp\CompPowerTraderOverdrivable.cs" />
     <Compile Include="CompProps\CompProperties_ArchoHullConversion.cs" />
     <Compile Include="CompProps\CompProperties_Archolife.cs" />
+    <Compile Include="CompProps\CompProperties_ArcholifeCosmetics.cs" />
     <Compile Include="CompProps\CompProperties_BuildingConsciousness.cs" />
     <Compile Include="CompProps\CompProperties_EngineTrail.cs" />
     <Compile Include="CompProps\CompProperties_BecomeBuilding.cs" />
@@ -163,6 +181,7 @@
     <Compile Include="CompProps\CompProperties_PowerPlantSolarShip.cs" />
     <Compile Include="CompProps\CompProperties_ShuttleCosmetics.cs" />
     <Compile Include="CompProps\CompProperties_CryptoLaunchable.cs" />
+    <Compile Include="CompProps\CompProperties_ShipLight.cs" />
     <Compile Include="CompProps\CompProperties_SoShipPart.cs" />
     <Compile Include="CompProps\CompProperties_SpinalMount.cs" />
     <Compile Include="CompProps\CompProperties_ShipHeat.cs" />
@@ -181,7 +200,11 @@
     <Compile Include="Comp\CompArcholife.cs" />
     <Compile Include="Comp\CompShuttleCosmetics.cs" />
     <Compile Include="Comp\CompCryptoLaunchable.cs" />
+    <Compile Include="Comp\CompShipLight.cs" />
+    <Compile Include="Comp\CompSoSGlower.cs" />
     <Compile Include="Comp\CompSoShipPart.cs" />
+    <Compile Include="Comp\CompSoSPowerTrader.cs" />
+    <Compile Include="Comp\CompSoSSchedule.cs" />
     <Compile Include="Comp\CompSpinalMount.cs" />
     <Compile Include="Comp\CompSoSUnlock.cs" />
     <Compile Include="Comp\CompShuttleLaunchable.cs" />
@@ -237,7 +260,6 @@
     <Compile Include="HediffPawnIsHologram.cs" />
     <Compile Include="Hediff_AddedPartNoRemoveSubparts.cs" />
     <Compile Include="HideLightingLayersInSpace.cs" />
-    <Compile Include="H_Vacuum_PathFinder.cs" />
     <Compile Include="Comp\InsectPillarSiteComp.cs" />
     <Compile Include="Jobs\JobDriver_FleeVacuum.cs" />
     <Compile Include="Jobs\JobDriver_InstallConsciousness.cs" />
@@ -293,7 +315,7 @@
     <Compile Include="PlaceWorker\Placeworker_SolarShip.cs" />
     <Compile Include="PlaceWorker\PlaceWorker_SpinalMountPort.cs" />
     <Compile Include="PreviousWorld.cs" />
-    <Compile Include="Projectile\Bullet_HologramLaser.cs" />
+    <Compile Include="Obsolete\Bullet_HologramLaser.cs" />
     <Compile Include="Projectile\Projectile_SoSFake.cs" />
     <Compile Include="Projectile\Projectile_ExplosiveShipCombat.cs" />
     <Compile Include="Projectile\Projectile_ExplosiveShipCombatPsychic.cs" />
@@ -307,8 +329,6 @@
     <Compile Include="Quest\QuestNode_GenerateThingSetArchotech.cs" />
     <Compile Include="Quest\QuestPart_ArchotechSpawn.cs" />
     <Compile Include="Obsolete\PlaceWorker_InsideStarship.cs" />
-    <Compile Include="Comp\CompRoofMe.cs" />
-    <Compile Include="CompProps\CompProperties_RoofMe.cs" />
     <Compile Include="ScenPart_StartInSpace.cs" />
     <Compile Include="SectionLayer_ShipHeat.cs" />
     <Compile Include="Obsolete\ShipCombatManager.cs" />
@@ -316,7 +336,6 @@
     <Compile Include="ShipHeatNet.cs" />
     <Compile Include="ShipMoveBlueprint.cs" />
     <Compile Include="ShuttleCaravanUtility.cs" />
-    <Compile Include="ShuttleMod.cs" />
     <Compile Include="SpaceSite.cs" />
     <Compile Include="MapGen\SymbolResolver_DebrisEdgeStreet.cs" />
     <Compile Include="MapGen\SymbolResolver_DebrisClump.cs" />
@@ -401,5 +420,14 @@
     <Compile Include="WorldSwitchUtility.cs" />
     <Compile Include="Jobs\JobDriver_CarryToCryptonest.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <PackageReference Include="Krafs.Publicizer">
+      <Version>2.2.1</Version>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Publicize Include="Assembly-CSharp" IncludeVirtualMembers="false" />
+  </ItemGroup>
 </Project>

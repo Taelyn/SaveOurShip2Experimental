@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
 	<packageId>kentington.saveourship2</packageId>
-	<author>Kentington, Thain, SonicTHI</author>
+	<author>Kentington, Thain, SonicTHI, Owlchemist</author>
 	<name>Save Our Ship 2</name>
 	<description>A comprehensive overhaul of spaceflight.</description>
 	<url/>
@@ -16,11 +16,6 @@
 			<downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
 		</li>
 		<li>
-			<packageId>UnlimitedHugs.HugsLib</packageId>
-			<displayName>HugsLib</displayName>
-			<steamWorkshopUrl>https://steamcommunity.com/sharedfiles/filedetails/?id=818773962</steamWorkshopUrl>
-		</li>
-		<li>
 			<packageId>Murmur.WallLight</packageId>
 			<displayName>Wall Light</displayName>
 			<steamWorkshopUrl>https://steamcommunity.com/sharedfiles/filedetails/?id=1423699208</steamWorkshopUrl>
@@ -32,18 +27,25 @@
 		<li>Ludeon.RimWorld.Royalty</li>
 		<li>Ludeon.RimWorld.Ideology</li>
 		<li>Ludeon.RimWorld.Biotech</li>
-		<li>UnlimitedHugs.HugsLib</li>
 	</loadAfter>
 	<incompatibleWith>
-		<li>majorhoff.rimthreaded</li>
-		<li>erdelf.MinifyEverything</li>
+		<li>ceteam.combatextended</li>
 		<li>rwmt.multiplayer</li>
+		<li>automatic.gunplay</li>
+		<li>mlie.yayoscombat3</li>
+		<li>majorhoff.rimthreaded</li>
+		<li>user19990313777.runtimegc</li>
+		<li>erdelf.MinifyEverything</li>
+		<li>impassablemapmaker.kv.rw</li>
 		<li>lukakama.rimworldrealfow</li>
-		<li>storm.sos2ex</li>
-		<li>drzhivago.docworld</li>
+		<li>merthsoft.designatorshapes</li>
+		<li>saakra.empire</li>
+		<li>automatic.traderships</li>
+		<li>VanillaExpanded.HelixienGas</li>
+		<li>windowsxp.realisticplanets</li>
 		<li>powerlunatic.flawlesselectronics</li>
-		<li>ryder.saveourshipsimplified</li>
-		<!-- <li>ceteam.combatextended</li> -->
-		<li>taranchuk.performanceoptimizer</li>
+		<li>limetreesnake.maintenance</li>
+		<li>drzhivago.docworld</li>
+		<li>storm.sos2ex</li>
 	</incompatibleWith>
 </ModMetaData>

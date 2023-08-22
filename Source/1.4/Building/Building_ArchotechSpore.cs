@@ -214,10 +214,10 @@ namespace RimWorld
         {
             fieldStrength += 0.00005f;
             MeditationTicks++;
-            if(MeditationTicks > 6000)
+            if (MeditationTicks > 6000)
             {
                 MeditationTicks = 0;
-                Consciousness.needs.mood.thoughts.memories.TryGainMemory(ThoughtDef.Named("ArchotechSporeMeditation"));
+                Consciousness?.needs.mood.thoughts.memories.TryGainMemory(ThoughtDef.Named("ArchotechSporeMeditation"));
             }
         }
 
@@ -258,7 +258,7 @@ namespace RimWorld
                 {
                     foreach (Pawn p in pawns2)
                     {
-                        if (pawn == p || LovePartnerRelationUtility.ExistingLovePartner(pawn)==p || ((pawn.gender == p.gender) && (!p.story.traits.HasTrait(TraitDefOf.Gay) || pawn.story.traits.HasTrait(TraitDefOf.Gay))))
+                        if (pawn == p || pawn.relations.FamilyByBlood.Contains(p) || LovePartnerRelationUtility.ExistingLovePartner(pawn)==p || ((pawn.gender == p.gender) && (!p.story.traits.HasTrait(TraitDefOf.Gay) || pawn.story.traits.HasTrait(TraitDefOf.Gay))))
                             continue;
                         float score = pawn.relations.SecondaryRomanceChanceFactor(p) * Mathf.InverseLerp(5f, 100f, pawn.relations.OpinionOf(p));
                         if (score < worstScore)
@@ -304,7 +304,7 @@ namespace RimWorld
                     {
                         object[] parms3 = new object[] { worstA, worstB, parms[1], parms2[1], null, null, null, null };
                         typeof(InteractionWorker_RomanceAttempt).GetMethod("GetNewLoversLetter", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(worker, parms3);
-                        Find.LetterStack.ReceiveLetter((string)parms3[5], ((string)parms3[4]).Translate(parms3[0], parms3[1], parms3[2], parms3[3]), LetterDefOf.PositiveEvent);
+                        Find.LetterStack.ReceiveLetter((string)parms3[5], TranslatorFormattedStringExtensions.Translate((string)parms3[4], (string)parms3[0], (string)parms3[1], (string)parms3[2], (string)parms3[3]), LetterDefOf.PositiveEvent);
                     }
                     LovePartnerRelationUtility.TryToShareBed(worstA, worstB);
                 }
@@ -1021,7 +1021,7 @@ namespace RimWorld
 
             builder.AppendLine(GameVictoryUtility.InMemoryOfSection());
 
-            builder.AppendLine("Save Our Ship 2 was developed by Kentington and Thain, with additional code by SonicTHI");
+            builder.AppendLine("Save Our Ship 2 was developed by Kentington and Thain, with community maintenance and feature expansions by SonicTHI and Owlchemist");
             builder.AppendLine("Special thanks to art/code contributors Oskar Potocki, K', Sarg, Karim, Saakra, and Revolus");
             builder.AppendLine();
             builder.AppendLine("Shipwrights: (Insert Boi here), AlfadorZero, choppytehbear, Dammerung, DianaWinters, Foxtrot, Inert, Jameson, Moonshine Dusk");
@@ -1029,7 +1029,7 @@ namespace RimWorld
 
             //Log.Message(builder.ToString());
 
-            ShipInteriorMod2.SoSWin = true;
+            Find.World.GetComponent<PastWorldUWO2>().SoSWin = true;
             GameVictoryUtility.ShowCredits(builder.ToString());
         }
     }

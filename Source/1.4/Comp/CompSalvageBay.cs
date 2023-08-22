@@ -78,32 +78,7 @@ namespace RimWorld
                 {
                     action = delegate
                     {
-                        List<Building> buildings = new List<Building>();
-                        List<Thing> things = new List<Thing>();
-                        foreach (Thing t in this.parent.Map.listerThings.AllThings)
-                        {
-                            if (t is Building b && b.def.CanHaveFaction && b.Faction != Faction.OfPlayer)
-                            {
-                                buildings.Add(b);
-                            }
-                            else if (t is DetachedShipPart)
-                                things.Add(t);
-                        }
-                        if (buildings.Any())
-                        {
-                            foreach (Building b in buildings)
-                            {
-                                if (b is Building_Storage s)
-                                    s.settings.filter.SetDisallowAll();
-                                b.SetFaction(Faction.OfPlayer);
-                            }
-                            Messages.Message(TranslatorFormattedStringExtensions.Translate("ShipClaimWrecksSuccess", buildings.Count), parent, MessageTypeDefOf.PositiveEvent);
-                        }
-                        //remove floating tiles
-                        foreach (Thing t in things)
-                        {
-                            t.Destroy();
-                        }
+                        Claim();
                     },
                     defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipClaimWrecksCommand"),
                     defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipClaimWrecksCommandDesc"),
@@ -113,11 +88,12 @@ namespace RimWorld
                 {
                     //abandon target wreck (rem rock floor)
                     targetMap = this.parent.Map,
+                    position = this.parent.Position,
                     defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipRemoveWrecksCommand"),
                     defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipRemoveWrecksCommandDesc"),
                     icon = ContentFinder<Texture2D>.Get("UI/SalvageCancel")
                 };
-                if (mapComp.InCombat || this.parent.Map.mapPawns.AllPawns.Where(p => p.HostileTo(Faction.OfPlayer)).Any())
+                if (mapComp.InCombat || GenHostility.AnyHostileActiveThreatToPlayer(parent.Map))
                 {
                     moveWreck.Disable(TranslatorFormattedStringExtensions.Translate("ShipSalvageDisabled"));
                     moveWreckFlip.Disable(TranslatorFormattedStringExtensions.Translate("ShipSalvageDisabled"));
@@ -132,6 +108,35 @@ namespace RimWorld
                 yield return removeTargetWreck;
             }
 		}
+        private void Claim()
+        {
+            List<Building> buildings = new List<Building>();
+            List<Thing> things = new List<Thing>();
+            foreach (Thing t in this.parent.Map.listerThings.AllThings)
+            {
+                if (t is Building b && b.def.CanHaveFaction && b.Faction != Faction.OfPlayer)
+                {
+                    buildings.Add(b);
+                }
+                else if (t is DetachedShipPart)
+                    things.Add(t);
+            }
+            if (buildings.Any())
+            {
+                foreach (Building b in buildings)
+                {
+                    if (b is Building_Storage s)
+                        s.settings.filter.SetDisallowAll();
+                    b.SetFaction(Faction.OfPlayer);
+                }
+                Messages.Message(TranslatorFormattedStringExtensions.Translate("ShipClaimWrecksSuccess", buildings.Count), parent, MessageTypeDefOf.PositiveEvent);
+            }
+            //remove floating tiles
+            foreach (Thing t in things)
+            {
+                t.Destroy();
+            }
+        }
         public override void CompTickRare()
         {
             base.CompTickRare();

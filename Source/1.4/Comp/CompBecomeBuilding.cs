@@ -23,7 +23,9 @@ namespace RimWorld
         {
             IntVec3 myPos = this.parent.Position;
             Map myMap = this.parent.Map;
-            Building transformed = (Building)ThingMaker.MakeThing(Props.buildingDef);
+			if (myMap != null && myPos.CloseToEdge(myMap, (Props.buildingDef.size.x + 1) / 2))
+				return;
+			Building transformed = (Building)ThingMaker.MakeThing(Props.buildingDef);
             transformed.Position = myPos;
             transformed.SetFaction(parent.Faction);
             if (this.parent.TryGetComp<CompRefuelable>() != null)
@@ -133,7 +135,13 @@ namespace RimWorld
             base.PostSpawnSetup(respawningAfterLoad);
 			if (parent.TryGetComp<CompShuttleCosmetics>() != null)
 				CompShuttleCosmetics.ChangeShipGraphics(parent, parent.TryGetComp<CompShuttleCosmetics>().Props);
+			Current.Game.GetComponent<RimworldMod.EnvironmentCachingUtility>().shuttleCache.Add(parent);
         }
+
+		public override void PostDeSpawn(Map map)
+		{
+			Current.Game.GetComponent<RimworldMod.EnvironmentCachingUtility>().shuttleCache.Remove(parent);
+		}
     }
 }
 

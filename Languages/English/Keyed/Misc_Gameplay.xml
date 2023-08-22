@@ -5,7 +5,7 @@
 	<ShipStatsShipMass>Weight: {0}</ShipStatsShipMass>
 	<ShipStatsShipMaxTakeoff>Maximum takeoff weight: {0}</ShipStatsShipMaxTakeoff>
 	<ShipStatsShipEnergy>Stored power: {0} / {1} Wd</ShipStatsShipEnergy>
-	<ShipStatsShipHeat>Stored heat: {0} / {1}</ShipStatsShipHeat>
+	<ShipStatsShipHeat>Stored heat: {0} / {1}{2}</ShipStatsShipHeat>
 	<ShipStatsShipCombatRating>Combat rating: {0}</ShipStatsShipCombatRating>
 	<ShipStatsShipCombatThrust>Thrust/Weight ratio: {0}</ShipStatsShipCombatThrust>
 	<ShipStatsChemfuel>Fuel needed for takeoff: {0}</ShipStatsChemfuel>
@@ -19,7 +19,7 @@
 	<ShipPlanetLeaveDesc>Leave this planet behind and find a new rimworld to settle</ShipPlanetLeaveDesc>
 	
 	<GameOverShipPlanetLeaveIntro>You've set out to a new planet!\n</GameOverShipPlanetLeaveIntro>
-	<GameOverShipPlanetLeaveEnding>Your machine persona will now navigate yur ship out of planetary orbit. It might find a prosperous planet in this system. Or, it may undertake a centuries-long journey to another star. It might even decide to hide under ice on an asteroid for a few thousand years, waiting for someone to build a new glitterworld here.\n\nYou can however take matters into your own hands by starting a new colony, editing the scenario, adding a "Load ship" part and selecting your ship.</GameOverShipPlanetLeaveEnding>
+	<GameOverShipPlanetLeaveEnding>Your machine persona will now navigate your ship out of planetary orbit. It might find a prosperous planet in this system. Or, it may undertake a centuries-long journey to another star. It might even decide to hide under ice on an asteroid for a few thousand years, waiting for someone to build a new glitterworld here.\n\nYou can however take matters into your own hands by starting a new colony, editing the scenario, adding a "Load ship" part and selecting your ship.</GameOverShipPlanetLeaveEnding>
 	<ShipAbandonColoniesWarning>You are about to embark on a journey spanning years or decades, during which time no communication with your planet-bound colonies will be possible. It is unlikely they will be able to survive on their own.\n\nFurthermore, any colonists or animals aboard the ship will not survive the journey unless they are in cryptosleep.\n\nGive this order only if you are willing to abandon everyone and everything left behind.</ShipAbandonColoniesWarning>
 	<ShipAbandonColoniesWarningPK>Due to the incoming planetkiller, you will not be able to return to this world.\n\nFurthermore, any colonists or animals aboard the ship will not survive the journey unless they are in cryptosleep.\n\nGive this order only if you are willing to abandon everyone and everything left behind.</ShipAbandonColoniesWarningPK>
 	<ChooseAllyToTakeColony>Before you leave, you can send a message to an allied faction, offering them your colony's buildings and any colonists left behind. Should you ever return to this planet, you may find that your former colony has become a thriving settlement of that faction.</ChooseAllyToTakeColony>
@@ -32,7 +32,7 @@
 	
 	<SpaceSiteFuelCost>Fuel cost: {0}%</SpaceSiteFuelCost>
 	<ShipForceExitAndRemoveMapCountdown>Entering atmosphere in {0}</ShipForceExitAndRemoveMapCountdown>
-	<ShipBurnupPlayer>Orbit failiure!</ShipBurnupPlayer>
+	<ShipBurnupPlayer>Orbit failure!</ShipBurnupPlayer>
 	<ShipBurnupPlayerDesc>With the loss of the last ship bridge this map can no longer maintain its orbit and will enter the atmosphere in {0} days! \n\nEverything on it will be destroyed!</ShipBurnupPlayerDesc>
 	<ShipBurnupPlayerPrevented>Building a ship bridge has allowed you to stabilize the orbit.</ShipBurnupPlayerPrevented>
 	<ShipBurnUpCountdown>Entering atmosphere in {0}!</ShipBurnUpCountdown>
@@ -64,6 +64,8 @@
 	<MessageShuttleMustBePartiallyFueled>Shuttle must have at least 25% fuel to launch a boarding action</MessageShuttleMustBePartiallyFueled>
 	<MessageShuttleMustBeFueledToLand>Shuttle must have at least 15% fuel to land.</MessageShuttleMustBeFueledToLand>
 	<MessageShuttleMustBeFueledToOrbit>Shuttle must have at least 80% fuel to reach orbit.</MessageShuttleMustBeFueledToOrbit>
+	<SoSPodsArrived>Shuttles have arrived at destination.</SoSPodsArrived>
+	<ShipCombatAbandonPawns>WARNING!\n\nFleeing the enemy ship will leave behind any of your colonists still on board!</ShipCombatAbandonPawns>
 	
 	<MustPlaceNearSpinalMountPort>Must place adjacent to a spinal-mount module</MustPlaceNearSpinalMountPort>
 	<MustPlaceInsideShipFramework>Must place in a room bordered only by ship parts.</MustPlaceInsideShipFramework>

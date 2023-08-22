@@ -13,23 +13,25 @@ namespace RimWorld
 {
     class ScenPart_LoadShip : ScenPart
     {
-        static string FILENAME_NONE = "Select ship to load";
-        static string filename = "Select ship to load";
+        static readonly string FILENAME_NONE = "Select ship to load";
+
+        string filename = "Select ship to load";
+        bool discardLog;
+        bool discardTales;
         string playerFactionName;
         FactionDef playerFactionDef;
-        public static Ideo playerFactionIdeo;
         List<GameComponent> components;
+        public Ideo playerFactionIdeo;
         List<Ideo> ideosAboardShip;
         HashSet<CustomXenotype> xenosAboardShip;
         TickManager tickManager;
         CustomXenogermDatabase customXenogermDatabase;
-
-        static List<Thing> toLoad;
-        static List<Zone> zonesToLoad;
-        static List<IntVec3> terrainPos;
-        static List<TerrainDef> terrainDefs;
-        static List<IntVec3> roofPos;
-        static List<RoofDef> roofDefs;
+        List<Thing> toLoad;
+        List<Zone> zonesToLoad;
+        List<IntVec3> terrainPos;
+        List<TerrainDef> terrainDefs;
+        List<IntVec3> roofPos;
+        List<RoofDef> roofDefs;
         PlaySettings playSettings;
         StoryWatcher storyWatcher;
         ResearchManager researchManager;
@@ -43,35 +45,86 @@ namespace RimWorld
         {
             return !(other is ScenPart_StartInSpace || other is ScenPart_AfterlifeVault);
         }
-
         public override void ExposeData()
         {
             base.ExposeData();
             Scribe_Values.Look<string>(ref filename, "filename");
         }
-
         public override void DoEditInterface(Listing_ScenEdit listing)
         {
             Rect scenPartRect = listing.GetScenPartRect(this, ScenPart.RowHeight * 3f);
-            Rect rect = new Rect(scenPartRect.x, scenPartRect.y, scenPartRect.width, scenPartRect.height / 3f);
-            if (Widgets.ButtonText(rect, filename))
+            Rect rect1 = new Rect(scenPartRect.x, scenPartRect.y, scenPartRect.width, scenPartRect.height / 3f);
+            Rect rect2 = new Rect(scenPartRect.x, scenPartRect.y + scenPartRect.height / 3f, scenPartRect.width, scenPartRect.height / 3f);
+            Rect rect3 = new Rect(scenPartRect.x, scenPartRect.y + 2 * scenPartRect.height / 3f, scenPartRect.width, scenPartRect.height / 3f);
+            if (!HasValidFilename())
+                LoadLatest();
+            if (Widgets.ButtonText(rect1, filename))
             {
                 FloatMenuUtility.MakeMenu(Directory.GetFiles(Path.Combine(GenFilePaths.SaveDataFolderPath, "SoS2")), (string path) => Path.GetFileNameWithoutExtension(path), (string path) => () => { filename = Path.GetFileNameWithoutExtension(path); });
             }
+            if (Widgets.ButtonText(rect2, "Discard log: " + discardLog.ToString()))
+            {
+                List<FloatMenuOption> toggleLog = new List<FloatMenuOption>();
+                toggleLog.Add(new FloatMenuOption("Discard log: True", delegate ()
+                {
+                    discardLog = true;
+                }, MenuOptionPriority.Default, null, null, 0f, null, null, true, 0));
+                toggleLog.Add(new FloatMenuOption("Discard log: False", delegate ()
+                {
+                    discardLog = false;
+                }, MenuOptionPriority.Default, null, null, 0f, null, null, true, 0));
+                Find.WindowStack.Add(new FloatMenu(toggleLog));
+            }
+            if (Widgets.ButtonText(rect3, "Discard tales: " + discardTales.ToString()))
+            {
+                List<FloatMenuOption> toggleTales = new List<FloatMenuOption>();
+                toggleTales.Add(new FloatMenuOption("Discard tales: True", delegate ()
+                {
+                    discardTales = true;
+                }, MenuOptionPriority.Default, null, null, 0f, null, null, true, 0));
+                toggleTales.Add(new FloatMenuOption("Discard tales: False", delegate ()
+                {
+                    discardTales = false;
+                }, MenuOptionPriority.Default, null, null, 0f, null, null, true, 0));
+                Find.WindowStack.Add(new FloatMenu(toggleTales));
+            }
         }
-
         public override string Summary(Scenario scen)
         {
-            if(HasValidFilename())
+            if (HasValidFilename())
                 return "Load ship " + filename + "\nThis will disable many other types of scenario part, such as starting pawns.";
             return "";
         }
 
-        public void DoEarlyInit()
+        public bool HasValidFilename()
+        {
+            return filename != FILENAME_NONE;
+        }
+
+        public override void PreConfigure()
+        {
+            base.PreConfigure();
+            LoadLatest();
+        }
+        private void LoadLatest() //load latest save as default
+        {
+            string folder = Path.Combine(GenFilePaths.SaveDataFolderPath, "SoS2");
+            if (!Directory.Exists(folder))
+            {
+                Log.Error("Created SOS2 ship save directory, you are using a load ship scenario part but have no ships to load!");
+                Directory.CreateDirectory(folder);
+            }
+            var directory = new DirectoryInfo(folder);
+            var mostRecentFile = directory.GetFiles().OrderByDescending(f => f.LastWriteTime).FirstOrDefault();
+            if (mostRecentFile != null)
+                filename = Path.GetFileNameWithoutExtension(mostRecentFile.FullName);
+        }
+
+        public void DoEarlyInit() //Scenario.GetFirstConfigPage call via patch
         {
             WorldSwitchUtility.LoadShipFlag = true;
             LoadShip();
-
+            //remove incompatible scenario parts - not sure if this works at all
             List<ScenPart> toRemove = new List<ScenPart>();
             foreach (ScenPart part in Find.Scenario.AllParts)
             {
@@ -81,10 +134,46 @@ namespace RimWorld
             foreach (ScenPart part in toRemove)
                 Find.Scenario.RemovePart(part);
         }
+        void LoadShip()
+        {
+            Scribe.mode = LoadSaveMode.Inactive;
 
+            Scribe.loader.InitLoading(Path.Combine(Path.Combine(GenFilePaths.SaveDataFolderPath, "SoS2"), filename + ".sos2"));
+
+            Scribe_Defs.Look<FactionDef>(ref playerFactionDef, "playerFactionDef");
+            Scribe_Values.Look(ref playerFactionName, "playerFactionName");
+            //typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, true);
+            Scribe_Deep.Look(ref playerFactionIdeo, "playerFactionIdeo");
+            //typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, false);
+
+            Scribe_Deep.Look<TickManager>(ref tickManager, false, "tickManager");
+            Scribe_Deep.Look<PlaySettings>(ref playSettings, false, "playSettings");
+            Scribe_Deep.Look<StoryWatcher>(ref storyWatcher, false, "storyWatcher");
+            Scribe_Deep.Look<ResearchManager>(ref researchManager, false, "researchManager");
+            Scribe_Deep.Look<TaleManager>(ref taleManager, false, "taleManager");
+            Scribe_Deep.Look<OutfitDatabase>(ref outfitDatabase, false, "outfitDatabase");
+            Scribe_Deep.Look<DrugPolicyDatabase>(ref drugPolicyDatabase, false, "drugPolicyDatabase");
+            Scribe_Deep.Look<FoodRestrictionDatabase>(ref foodRestrictionDatabase, false, "foodRestrictionDatabase");
+            Scribe_Deep.Look<UniqueIDsManager>(ref Current.Game.uniqueIDsManager, true, "uniqueIDsManager");
+
+            //typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, true);
+            Scribe_Collections.Look<Ideo>(ref ideosAboardShip, "ideos", LookMode.Deep);
+            //typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, false);
+            Scribe_Collections.Look<CustomXenotype>(ref xenosAboardShip, "xenotypes", LookMode.Deep);
+            Scribe_Deep.Look<CustomXenogermDatabase>(ref customXenogermDatabase, false, "customXenogermDatabase");
+
+            Scribe_Collections.Look<Thing>(ref toLoad, "shipThings", LookMode.Deep);
+            Scribe_Collections.Look<Zone>(ref zonesToLoad, "shipZones", LookMode.Deep);
+            Scribe_Collections.Look<IntVec3>(ref terrainPos, "terrainPos");
+            Scribe_Collections.Look<TerrainDef>(ref terrainDefs, "terrainDefs");
+            Scribe_Collections.Look<IntVec3>(ref roofPos, "roofPos");
+            Scribe_Collections.Look<RoofDef>(ref roofDefs, "roofDefs");
+
+            Scribe.mode = LoadSaveMode.Inactive;
+        }
         public override void PostWorldGenerate()
         {
-            if (filename != FILENAME_NONE)
+            if (HasValidFilename())
             {
                 Faction.OfPlayer.def = playerFactionDef;
                 Faction.OfPlayer.Name = playerFactionName;
@@ -92,11 +181,57 @@ namespace RimWorld
                     AddIdeo(ideo);
                 foreach (CustomXenotype xeno in xenosAboardShip)
                     Current.Game.customXenotypeDatabase.customXenotypes.Add(xeno);
-                foreach (GameComponent component in components)
+                Current.Game.tickManager = tickManager;
+                Current.Game.tickManager.DebugSetTicksGame(Current.Game.tickManager.TicksAbs + 3600000 * Rand.RangeInclusive(ModSettings_SoS.minTravelTime, ModSettings_SoS.maxTravelTime));
+
+                Current.Game.playSettings = playSettings;
+                Current.Game.storyWatcher = storyWatcher;
+                Current.Game.researchManager = researchManager;
+                if (!discardTales)
+                    Current.Game.taleManager = taleManager;
+                if (Current.Game.taleManager == null)
+                    Current.Game.taleManager = new TaleManager();
+                if (!discardLog)
+                {
+                    Scribe_Deep.Look<PlayLog>(ref playLog, false, "playLog");
+                    Current.Game.playLog = playLog; //playerlog calls gameStartAbsTick before set up, use GenTicks.TicksAbs
+                    if (Current.Game.playLog == null)
+                        Current.Game.playLog = new PlayLog();
+                }
+                Current.Game.outfitDatabase = outfitDatabase;
+                Current.Game.drugPolicyDatabase = drugPolicyDatabase;
+                Current.Game.foodRestrictionDatabase = foodRestrictionDatabase;
+
+                foreach (CustomXenogerm xeno in customXenogermDatabase.CustomXenogermsForReading)
+                    Current.Game.customXenogermDatabase.Add(xeno);
+
+                Scribe_Collections.Look<GameComponent>(ref components, "components", LookMode.Deep); //init issue
+                if (components.NullOrEmpty())
+                {
+                    Log.Message("comps are null");
+                    return;
+                }
+                List<GameComponent> toClobber = new List<GameComponent>();
+                foreach (GameComponent oldComp in Current.Game.components)
+                {
+                    foreach (GameComponent comp in components)
+                    {
+                        if (oldComp.GetType() == comp.GetType())
+                            toClobber.Add(oldComp);
+                    }
+                }
+                foreach (GameComponent clobber in toClobber)
+                    Current.Game.components.Remove(clobber);
+
+                foreach (GameComponent comp in components)
+                    Current.Game.components.Add(comp);
+                /*foreach (GameComponent component in components)
                 {
                     GameComponent compToClobber = null;
                     foreach (GameComponent existingComp in Current.Game.components)
                     {
+                        if (component == null || existingComp == null) //Apparently a null can sometimes sneak into this list
+                            continue;
                         if (existingComp.GetType() == component.GetType())
                         {
                             compToClobber = existingComp;
@@ -106,62 +241,70 @@ namespace RimWorld
                     if (compToClobber != null)
                         Current.Game.components.Remove(compToClobber);
                     Current.Game.components.Add(component);
-                }
-
-                Current.Game.tickManager = tickManager;
-                Current.Game.tickManager.DebugSetTicksGame(Current.Game.tickManager.TicksAbs + 3600000 * Rand.RangeInclusive(ModSettings_SoS.minTravelTime, ModSettings_SoS.maxTravelTime));
-
-                Current.Game.playSettings = playSettings;
-                Current.Game.storyWatcher = storyWatcher;
-                Current.Game.researchManager = researchManager;
-                Current.Game.taleManager = taleManager;
-                Current.Game.playLog = playLog;
-                Current.Game.outfitDatabase = outfitDatabase;
-                Current.Game.drugPolicyDatabase = drugPolicyDatabase;
-                Current.Game.foodRestrictionDatabase = foodRestrictionDatabase;
-
-                foreach (CustomXenogerm xeno in customXenogermDatabase.CustomXenogermsForReading)
-                    Current.Game.customXenogermDatabase.Add(xeno);
-
-                List<GameComponent> toClobber = new List<GameComponent>();
-
-                foreach (GameComponent oldComp in Current.Game.components)
+                }*/
+            }
+        }
+        public static void AddIdeo(Ideo ideo)
+        {
+            int oldID = ideo.id;
+            Find.IdeoManager.Add(ideo);
+            if (ideo.id != oldID)
+            {
+                Ideo wrongIdeo = Find.IdeoManager.IdeosListForReading.Where(otherIdeo => otherIdeo.id == oldID).FirstOrDefault();
+                if (wrongIdeo != null)
+                    wrongIdeo.id = ideo.id;
+                ideo.id = oldID;
+            }
+        }
+        static void ReCacheIdeo(Ideo ideo)
+        {
+            foreach (Precept precept in ideo.PreceptsListForReading)
+            {
+                if (precept is Precept_Ritual ritual)
                 {
-                    foreach (GameComponent comp in components)
+                    foreach (RitualObligationTrigger trigger in ritual.obligationTriggers)
                     {
-                        if (oldComp.GetType() == comp.GetType())
-                            toClobber.Add(oldComp);
+                        trigger.ritual = ritual;
+                    }
+                    if (ritual.attachableOutcomeEffect == null && !ritual.generatedAttachedReward && ritual.SupportsAttachableOutcomeEffect)
+                    {
+                        ritual.attachableOutcomeEffect = DefDatabase<RitualAttachableOutcomeEffectDef>.AllDefs.Where((RitualAttachableOutcomeEffectDef d) => d.CanAttachToRitual(ritual)).RandomElementWithFallback();
+                        ritual.generatedAttachedReward = true;
+                    }
+                    if (ritual.obligationTargetFilter != null)
+                    {
+                        ritual.obligationTargetFilter.parent = ritual;
                     }
                 }
-
-                foreach (GameComponent clobber in toClobber)
-                    Current.Game.components.Remove(clobber);
-
-                foreach (GameComponent comp in components)
-                    Current.Game.components.Add(comp);
+                if (precept is Precept_Building building)
+                {
+                    building.presenceDemand.parent = building;
+                }
             }
         }
 
         public static Map GenerateShipSpaceMap()
         {
-            if (filename != FILENAME_NONE)
+            ScenPart_LoadShip scen = (ScenPart_LoadShip)Current.Game.Scenario.parts.FirstOrDefault(s => s is ScenPart_LoadShip);
+            if (scen.filename != FILENAME_NONE)
             {
                 int newTile = ShipInteriorMod2.FindWorldTile();
                 Map spaceMap = GetOrGenerateMapUtility.GetOrGenerateMap(newTile, DefDatabase<WorldObjectDef>.GetNamed("ShipOrbiting"));
                 ((WorldObjectOrbitingShip)spaceMap.Parent).radius = 150;
                 ((WorldObjectOrbitingShip)spaceMap.Parent).theta = 2.75f;
                 Current.ProgramState = ProgramState.MapInitializing;
+
                 ShipInteriorMod2.AirlockBugFlag = true;
 
                 Scribe.loader.crossRefs.ResolveAllCrossReferences();
 
-                foreach (Thing thing in toLoad)
+                foreach (Thing thing in scen.toLoad)
                 {
                     try
                     {
                         if (!thing.Destroyed)
                         {
-                            thing.SpawnSetup(spaceMap, false);
+                            thing.SpawnSetup(spaceMap, thing is Building_ShipBridge);
                             if(thing.def.CanHaveFaction)
                                 thing.SetFaction(Faction.OfPlayer);
                             if(thing is IThingHolder holder && holder.GetDirectlyHeldThings()!=null)
@@ -186,27 +329,28 @@ namespace RimWorld
                     }
                 }
 
-                foreach (Zone zone in zonesToLoad)
+                foreach (Zone zone in scen.zonesToLoad)
                 {
                     zone.zoneManager = spaceMap.zoneManager;
                     spaceMap.zoneManager.RegisterZone(zone);
                 }
 
-                for (int i = 0; i < terrainPos.Count; i++)
+                for (int i = 0; i < scen.terrainPos.Count; i++)
                 {
-                    spaceMap.terrainGrid.SetTerrain(terrainPos[i], terrainDefs[i]);
+                    spaceMap.terrainGrid.SetTerrain(scen.terrainPos[i], scen.terrainDefs[i]);
                 }
 
-                for (int i = 0; i < roofPos.Count; i++)
+                for (int i = 0; i < scen.roofPos.Count; i++)
                 {
-                    spaceMap.roofGrid.SetRoof(roofPos[i], roofDefs[i]);
+                    spaceMap.roofGrid.SetRoof(scen.roofPos[i], scen.roofDefs[i]);
                 }
 
                 ShipInteriorMod2.AirlockBugFlag = false;
+
                 Current.ProgramState = ProgramState.Playing;
-                IntVec2 secs = (IntVec2)typeof(MapDrawer).GetProperty("SectionCount", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(spaceMap.mapDrawer);
+                IntVec2 secs = spaceMap.mapDrawer.SectionCount;
                 Section[,] secArray = new Section[secs.x, secs.z];
-                typeof(MapDrawer).GetField("sections", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(spaceMap.mapDrawer, secArray);
+                spaceMap.mapDrawer.sections = secArray;
                 for (int i = 0; i < secs.x; i++)
                 {
                     for (int j = 0; j < secs.z; j++)
@@ -220,8 +364,8 @@ namespace RimWorld
 
                 spaceMap.fogGrid.ClearAllFog();
                 CameraJumper.TryJump(spaceMap.Center, spaceMap);
-                spaceMap.weatherManager.curWeather = WeatherDef.Named("OuterSpaceWeather");
-                spaceMap.weatherManager.lastWeather = WeatherDef.Named("OuterSpaceWeather");
+                spaceMap.weatherManager.curWeather = ResourceBank.WeatherDefOf.OuterSpaceWeather;
+                spaceMap.weatherManager.lastWeather = ResourceBank.WeatherDefOf.OuterSpaceWeather;
                 spaceMap.Parent.SetFaction(Faction.OfPlayer);
                 Find.MapUI.Notify_SwitchedMap();
                 spaceMap.regionAndRoomUpdater.RebuildAllRegionsAndRooms();
@@ -235,90 +379,69 @@ namespace RimWorld
             }
             return null;
         }
-
-        void LoadShip()
+        public override void PostGameStart() //post load cleaup, open player crypto, sickness
         {
-            Scribe.mode = LoadSaveMode.Inactive;
-
-            Scribe.loader.InitLoading(Path.Combine(Path.Combine(GenFilePaths.SaveDataFolderPath, "SoS2"), filename + ".sos2"));
-
-            Scribe_Defs.Look<FactionDef>(ref playerFactionDef, "playerFactionDef");
-            Scribe_Values.Look(ref playerFactionName, "playerFactionName");
-            //typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, true);
-            Scribe_Deep.Look(ref playerFactionIdeo, "playerFactionIdeo");
-            //typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, false);
-
-            Scribe_Deep.Look<TickManager>(ref tickManager, false, "tickManager");
-            Scribe_Deep.Look<PlaySettings>(ref playSettings, false, "playSettings");
-            Scribe_Deep.Look<StoryWatcher>(ref storyWatcher, false, "storyWatcher");
-            Scribe_Deep.Look<ResearchManager>(ref researchManager, false, "researchManager");
-            Scribe_Deep.Look<TaleManager>(ref taleManager, false, "taleManager");
-            Scribe_Deep.Look<PlayLog>(ref playLog, false, "playLog");
-            Scribe_Deep.Look<OutfitDatabase>(ref outfitDatabase, false, "outfitDatabase");
-            Scribe_Deep.Look<DrugPolicyDatabase>(ref drugPolicyDatabase, false, "drugPolicyDatabase");
-            Scribe_Deep.Look<FoodRestrictionDatabase>(ref foodRestrictionDatabase, false, "foodRestrictionDatabase");
-            Scribe_Deep.Look<UniqueIDsManager>(ref Current.Game.uniqueIDsManager, true, "uniqueIDsManager");
-
-            //typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, true);
-            Scribe_Collections.Look<Ideo>(ref ideosAboardShip, "ideos", LookMode.Deep);
-            //typeof(GameDataSaveLoader).GetField("isSavingOrLoadingExternalIdeo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, false);
-            Scribe_Collections.Look<CustomXenotype>(ref xenosAboardShip, "xenotypes", LookMode.Deep);
-            Scribe_Deep.Look<CustomXenogermDatabase>(ref customXenogermDatabase, false, "customXenogermDatabase");
-            Scribe_Collections.Look<GameComponent>(ref components, "components", LookMode.Deep);
-
-            Scribe_Collections.Look<Thing>(ref toLoad, "shipThings", LookMode.Deep);
-            Scribe_Collections.Look<Zone>(ref zonesToLoad, "shipZones", LookMode.Deep);
-            Scribe_Collections.Look<IntVec3>(ref terrainPos, "terrainPos");
-            Scribe_Collections.Look<TerrainDef>(ref terrainDefs, "terrainDefs");
-            Scribe_Collections.Look<IntVec3>(ref roofPos, "roofPos");
-            Scribe_Collections.Look<RoofDef>(ref roofDefs, "roofDefs");
-
-            Scribe.mode = LoadSaveMode.Inactive;
-        }
-
-        public static void AddIdeo(Ideo ideo)
-        {
-            int oldID = ideo.id;
-            Find.IdeoManager.Add(ideo);
-            if (ideo.id != oldID)
+            foreach (Pawn p in Find.CurrentMap.mapPawns.AllPawns)
             {
-                Ideo wrongIdeo = Find.IdeoManager.IdeosListForReading.Where(otherIdeo => otherIdeo.id == oldID).FirstOrDefault();
-                if (wrongIdeo != null)
-                    wrongIdeo.id = ideo.id;
-                ideo.id = oldID;
+                p.needs.mood.thoughts.memories.Memories.Clear(); //clear memories as they might relate to old things
+                p.royalty = new Pawn_RoyaltyTracker(p); //reset royal everything
             }
-        }
-
-        public bool HasValidFilename()
-        {
-            return filename != FILENAME_NONE;
-        }
-
-        static void ReCacheIdeo(Ideo ideo)
-        {
-            foreach (Precept precept in ideo.PreceptsListForReading)
+            foreach (Building b in Find.CurrentMap.listerBuildings.allBuildingsColonist.Where(b => b.TryGetComp<CompCryptoLaunchable>() != null))
             {
-                if (precept is Precept_Ritual ritual)
+                Building_CryptosleepCasket c = b as Building_CryptosleepCasket;
+                if (c.ContainedThing is Pawn p)
                 {
-                    foreach (RitualObligationTrigger trigger in ritual.obligationTriggers)
-                    {
-                        trigger.ritual = ritual;
-                    }
-                    if (ritual.attachableOutcomeEffect == null && !ritual.generatedAttachedReward && ritual.SupportsAttachableOutcomeEffect)
-                    {
-                        ritual.attachableOutcomeEffect = DefDatabase<RitualAttachableOutcomeEffectDef>.AllDefs.Where((RitualAttachableOutcomeEffectDef d) => d.CanAttachToRitual(ritual)).RandomElementWithFallback();
-                        ritual.generatedAttachedReward = true;
-                    }
-                    if (ritual.obligationTargetFilter != null)
-                    {
-                        ritual.obligationTargetFilter.parent = ritual;
-                    }
+                    p.health.AddHediff(HediffDefOf.CryptosleepSickness, null, null, null);
                 }
-                if(precept is Precept_Building building)
-                {
-                    building.presenceDemand.parent = building;
-                }
+                c.Open();
             }
         }
     }
 }
+/* unfinished map for this mess of a system of scenPart, hpatches
+Player view vanilla: start -> scen edit(opt) -> storyteller -> world gen -> pick spot -> pick ideo -> pick pawns -> map gen -> game
+
+
+public static void SetupForQuickTestPlay()
+{
+	Current.ProgramState = ProgramState.Entry;
+	Current.Game = new Game();
+	Current.Game.InitData = new GameInitData();
+	Current.Game.Scenario = ScenarioDefOf.Crashlanded.scenario;
+	Find.Scenario.PreConfigure();
+	Current.Game.storyteller = new Storyteller(StorytellerDefOf.Cassandra, DifficultyDefOf.Rough);
+	Current.Game.World = WorldGenerator.GenerateWorld(0.05f, GenText.RandomSeedString(), OverallRainfall.Normal, OverallTemperature.Normal, OverallPopulation.Normal, null, 0f);
+	Find.GameInitData.ChooseRandomStartingTile();
+	Find.GameInitData.mapSize = 150;
+	Find.Scenario.PostIdeoChosen();
+	Find.GameInitData.PrepForMapGen();
+	Find.Scenario.PreMapGenerate();
+}
+
+todo exact call:
+hpatch RemoveUnwantedScenPartText
+hpatch FixThatBugInParticular
+hpatch DoNotRemoveMyIdeo
+hpatch NoNeedForMorePawns
+
+
+Scenario.GetFirstConfigPage
+	Page_SelectScenario.BeginScenarioConfiguration
+		Current.Game.Scenario.PreConfigure();
+			scenPart.PreConfigure();
+		Current.Game.Scenario.GetFirstConfigPage(); - hpatch LoadTheUniqueIDs (scenPart.DoEarlyInit();)
+		if above null PageUtility.InitGameStart();
+	
+WorldGenerator.GenerateWorld
+	Current.CreatingWorld.FinalizeInit();
+	Find.Scenario.PostWorldGenerate();
+	scenPart.PostWorldGenerate();
+	Find.Scenario.PostIdeoChosen();
+	PageUtility.InitGameStart()
+		Find.GameInitData.PrepForMapGen(); - hpatch FixPawnGen(return !WorldSwitchUtility.LoadShipFlag;)
+		Find.Scenario.PreMapGenerate(); -> scenPart.PreMapGenerate (unused)
+
+Game.InitNewGame()
+	MapGenerator.GenerateMap - hpatch GenerateSpaceMapInstead(ScenPart_LoadShip.GenerateShipSpaceMap())
+	scenPart.PostGameStart
+*/

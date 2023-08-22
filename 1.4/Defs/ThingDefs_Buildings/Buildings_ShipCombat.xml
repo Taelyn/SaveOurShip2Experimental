@@ -77,7 +77,7 @@
 		<defName>ShipCombatShieldGenerator</defName>
 		<label>shield generator</label>
 		<designatorDropdown>Ship_Shields</designatorDropdown>
-		<description>A shielding device which projects a momentum repulsor field. Shots can go out, but not in.\n\nGenerates heat when it blocks attacks. If no heatsink capacity is available, the shield will be damaged and require repairs.\n\nShip radiators cannot disperse heat while shields are up. Captains are advised to drop shields once heatsinks are close to capacity, or risk their ships turning into ovens.</description>
+		<description>A shielding device which projects a momentum repulsor field. Shots can go out, but not in.\n\nGenerates heat when it blocks attacks. If no heatsink capacity is available, the shield will be damaged and require repairs.\n\nCaptains are advised to drop shields once coolant reaches very high temperature, or risk heatsink damage.</description>
 		<size>(3,3)</size>
 		<receivesSignals>true</receivesSignals>
 		<statBases>
@@ -128,6 +128,62 @@
 			<Silver>800</Silver>
 			<Steel>40</Steel>
 			<ComponentSpacer>12</ComponentSpacer>
+		</costList>
+		<seeThroughFog>true</seeThroughFog>
+	</ThingDef>
+	<ThingDef ParentName="BuildingBase">
+		<defName>ShipCombatShieldGeneratorMini</defName>
+		<label>miniaturized shield generator</label>
+		<designatorDropdown>Ship_Shields</designatorDropdown>
+		<description>A small shielding device which projects a momentum repulsor field. Shots can go out, but not in.\n\nDue to its small size, generates 125% of a standard shield generator's heat when it blocks attacks. If no heatsink capacity is available, the shield will be damaged and require repairs.\n\nCaptains are advised to drop shields once coolant reaches very high temperature, or risk heatsink damage.</description>
+		<size>(1,1)</size>
+		<receivesSignals>true</receivesSignals>
+		<statBases>
+			<MaxHitPoints>200</MaxHitPoints>
+			<Flammability>0.5</Flammability>
+			<WorkToBuild>4000</WorkToBuild>
+		</statBases>
+		<graphicData>
+			<texPath>Things/Building/Ship/ShieldGeneratorMini</texPath>
+			<graphicClass>Graphic_SingleOnOff</graphicClass>
+			<drawSize>(1,1)</drawSize>
+		</graphicData>
+		<drawerType>MapMeshAndRealTime</drawerType>
+		<placeWorkers>
+			<li>PlaceWorker_OnShipHull</li>
+			<li>PlaceWorker_ShipProjectileInterceptorRadius</li>
+		</placeWorkers>
+		<comps>
+			<li Class="CompProperties_ShipHeat">
+				<compClass>CompShipCombatShield</compClass>
+				<heatMultiplier>1.25</heatMultiplier>
+				<shieldMin>10</shieldMin>
+				<shieldMax>20</shieldMax>
+				<shieldDefault>15</shieldDefault>
+			</li>
+			<li Class="CompProperties_Power">
+				<compClass>CompPowerTrader</compClass>
+				<basePowerConsumption>750</basePowerConsumption>
+				<transmitsPower>true</transmitsPower>
+			</li>
+			<li Class="CompProperties_Flickable"/>
+			<li Class="CompProperties_Breakdownable"/>
+		</comps>
+		<rotatable>false</rotatable>
+		<selectable>true</selectable>
+		<soundImpactDefault>BulletImpact_Metal</soundImpactDefault>
+		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
+		<designationCategory>Ship</designationCategory>
+		<constructEffect>ConstructMetal</constructEffect>
+		<tickerType>Normal</tickerType>
+		<researchPrerequisites>
+			<li>ShipShields</li>
+		</researchPrerequisites>
+		<costList>
+			<Plasteel>30</Plasteel>
+			<Silver>200</Silver>
+			<Steel>10</Steel>
+			<ComponentSpacer>4</ComponentSpacer>
 		</costList>
 		<seeThroughFog>true</seeThroughFog>
 	</ThingDef>
@@ -226,7 +282,7 @@
 		<defName>ShipHeatsink</defName>
 		<label>heatsink</label>
 		<altitudeLayer>WorldClipper</altitudeLayer>
-		<description>A heatsink that slowly removes heat from the heat network. Will not function if the ship is cloaked.\n\nHeat capacity: 200Hu\nHeat vented to space: 3Hu/s\nHeat loss: 2Hu/s</description>
+		<description>A heatsink that slowly removes heat from the heat network. Will take damage if coolant gets near maximum heat capacity and release all heat stored if destroyed. Does not function if the ship is cloaked.\n\nHeat capacity: 200Hu\nHeat vented to space: 4Hu/s\nHeat loss: 1Hu/s</description>
 		<size>(2,2)</size>
 		<graphicData>
 			<texPath>Things/Building/Ship/Heatsink</texPath>
@@ -251,8 +307,8 @@
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeatSink</compClass>
 				<heatCapacity>200</heatCapacity>
-				<heatVent>6</heatVent>
-				<heatLoss>4</heatLoss>
+				<heatVent>8</heatVent>
+				<heatLoss>2</heatLoss>
 				<threat>2</threat>
 			</li>
 			<li Class="CompProperties_Power">
@@ -263,6 +319,9 @@
 				<compClass>CompColorable</compClass>
 			</li>
 		</comps>
+		<building>
+			<paintable>true</paintable>
+		</building>
 		<researchPrerequisites>
 			<li>ShipHeatsink</li>
 		</researchPrerequisites>
@@ -271,7 +330,7 @@
 		<defName>ShipHeatsinkLarge</defName>
 		<label>large heatsink</label>
 		<altitudeLayer>WorldClipper</altitudeLayer>
-		<description>A large heatsink that slowly removes heat from the heat network. Will not function if the ship is cloaked.\n\nHeat capacity: 1000Hu\nHeat vented to space: 24Hu/s\nHeat loss: 12Hu/s</description>
+		<description>A large heatsink that slowly removes heat from the heat network. Will take damage if coolant gets near maximum heat capacity and release all heat stored if destroyed. Does not function if the ship is cloaked.\n\nHeat capacity: 1000Hu\nHeat vented to space: 16Hu/s\nHeat loss: 3Hu/s</description>
 		<size>(4,4)</size>
 		<graphicData>
 			<texPath>Things/Building/Ship/HeatsinkLarge</texPath>
@@ -296,8 +355,8 @@
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeatSink</compClass>
 				<heatCapacity>1000</heatCapacity>
-				<heatVent>24</heatVent>
-				<heatLoss>12</heatLoss>
+				<heatVent>32</heatVent>
+				<heatLoss>6</heatLoss>
 				<threat>12</threat>
 			</li>
 			<li Class="CompProperties_Power">
@@ -308,6 +367,9 @@
 				<compClass>CompColorable</compClass>
 			</li>
 		</comps>
+		<building>
+			<paintable>true</paintable>
+		</building>
 		<researchPrerequisites>
 			<li>ShipHeatsink</li>
 		</researchPrerequisites>
@@ -315,7 +377,7 @@
 	<ThingDef ParentName="ShipHeatsinkBase">
 		<defName>ShipHeatManifold</defName>
 		<label>coolant tank</label>
-		<description>A tank of coolant that stores excess heat produced by a ship. Slowly bleeds heat into the surrounding room if not in vacuum.\n\nHeat capacity: 800Hu\nHeat loss: 6Hu/s</description>
+		<description>A tank of coolant that stores excess heat produced by a ship. Slowly bleeds heat into the surrounding room if not in vacuum. Will take damage if coolant gets near maximum heat capacity and release all heat stored if destroyed.\n\nHeat capacity: 800Hu\nHeat loss: 2Hu/s</description>
 		<size>(2,2)</size>
 		<graphicData>
 			<texPath>Things/Building/Ship/Heatbank</texPath>
@@ -325,7 +387,7 @@
 		<statBases>
 			<MaxHitPoints>800</MaxHitPoints>
 			<WorkToBuild>1500</WorkToBuild>
-			<Flammability>0.7</Flammability>
+			<Flammability>0</Flammability>
 			<Beauty>-2</Beauty>
 		</statBases>
 		<costList>
@@ -338,7 +400,7 @@
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeatSink</compClass>
 				<heatCapacity>800</heatCapacity>
-				<heatLoss>6</heatLoss>
+				<heatLoss>4</heatLoss>
 				<threat>1</threat>
 			</li>
 		</comps>
@@ -349,7 +411,7 @@
 	<ThingDef ParentName="ShipHeatsinkBase">
 		<defName>ShipHeatBankLarge</defName>
 		<label>large coolant tank</label>
-		<description>A large tank of coolant that stores excess heat produced by a ship. Slowly bleeds heat into the surrounding room if not in vacuum.\n\nHeat capacity: 4000Hu\nHeat loss: 18Hu/s</description>
+		<description>A large tank of coolant that stores excess heat produced by a ship. Slowly bleeds heat into the surrounding room if not in vacuum. Will take damage if coolant gets near maximum heat capacity and release all heat stored if destroyed.\n\nHeat capacity: 4000Hu\nHeat loss: 6Hu/s</description>
 		<size>(4,4)</size>
 		<graphicData>
 			<texPath>Things/Building/Ship/HeatbankLarge</texPath>
@@ -359,7 +421,7 @@
 		<statBases>
 			<MaxHitPoints>1600</MaxHitPoints>
 			<WorkToBuild>6000</WorkToBuild>
-			<Flammability>0.7</Flammability>
+			<Flammability>0</Flammability>
 			<Beauty>-2</Beauty>
 		</statBases>
 		<costList>
@@ -372,7 +434,7 @@
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeatSink</compClass>
 				<heatCapacity>4000</heatCapacity>
-				<heatLoss>18</heatLoss>
+				<heatLoss>12</heatLoss>
 				<threat>5</threat>
 			</li>
 		</comps>
@@ -389,7 +451,7 @@
 		<graphicData>
 			<texPath>Things/Building/Ship/PurgePort</texPath>
 			<graphicClass>Graphic_Single</graphicClass>
-			<drawSize>(2.1,4.7)</drawSize>
+			<drawSize>(2,2)</drawSize>
 		</graphicData>
 		<statBases>
 			<MaxHitPoints>800</MaxHitPoints>
@@ -407,6 +469,8 @@
 		<comps>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeatPurge</compClass>
+				<heatCapacity>200</heatCapacity>
+				<heatLoss>1</heatLoss>
 				<heatPurge>5</heatPurge>
 				<threat>5</threat>
 			</li>
@@ -461,6 +525,8 @@
 		<comps>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeatPurge</compClass>
+				<heatCapacity>1000</heatCapacity>
+				<heatLoss>3</heatLoss>
 				<heatPurge>25</heatPurge>
 				<threat>30</threat>
 			</li>
@@ -496,7 +562,7 @@
 		<defName>ShipTurret_ACI</defName>
 		<label>cannon turret</label>
 		<designatorDropdown>ShipTurrets_AC</designatorDropdown>
-		<description>A starship turret that rapidly accelerates uranium slugs. Requires ammunition, but costs zero energy and very little heat to fire. Only useful at close range. Can be set to intercept torpedoes rather than firing at the enemy ship.\n\nWill vent heat to the surrounding room if no heatsink capacity is available.</description>
+		<description>A starship turret that rapidly accelerates uranium slugs. Requires ammunition, but costs zero energy and very little heat to fire. Only useful at close range. Can be set to intercept torpedoes rather than firing at the enemy ship.\n\nRequires sufficient stored power and heat capacity to function.</description>
 		<comps>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
@@ -565,7 +631,7 @@
 				<label>shoot slug</label>
 				<verbClass>Verb_LaunchProjectileShip</verbClass>
 				<hasStandardCommand>true</hasStandardCommand>
-				<minRange>29.9</minRange>
+				<minRange>31.9</minRange>
 				<range>500</range>
 				<warmupTime>0.5</warmupTime>
 				<forcedMissRadius>1</forcedMissRadius>
@@ -595,7 +661,7 @@
 		<thingClass>Projectile_SoSFake</thingClass>
 		<projectile>
 			<damageDef>Bomb</damageDef>
-			<speed>200</speed>
+			<speed>150</speed>
 			<explosionRadius>0</explosionRadius>
 			<soundHitThickRoof>Artillery_HitThickRoof</soundHitThickRoof>
 		</projectile>
@@ -615,7 +681,7 @@
 		<projectile>
 			<explosionRadius>1.1</explosionRadius>
 			<damageDef>BombACI</damageDef>
-			<speed>200</speed>
+			<speed>100</speed>
 		</projectile>
 	</ThingDef>
 	<ThingDef ParentName="BaseGrenadeProjectile">
@@ -668,7 +734,7 @@
 		<defName>ShipTurret_ACII</defName>
 		<label>large cannon turret</label>
 		<designatorDropdown>ShipTurrets_AC</designatorDropdown>
-		<description>A cruiser-class turret that rapidly accelerates uranium slugs. Requires ammunition, but costs zero energy and very little heat to fire. Only useful at close range.\n\nWill vent heat to the surrounding room if no heatsink capacity is available.</description>
+		<description>A large turret that rapidly accelerates uranium slugs. Requires ammunition, but costs zero energy and very little heat to fire. Only useful at close range.\n\nRequires sufficient stored power and heat capacity to function.</description>
 		<graphicData>
 			<texPath>Things/Building/Ship/HardpointYellow</texPath>
 			<drawSize>(3,3)</drawSize>
@@ -785,7 +851,7 @@
 			<drawSize>(4,4)</drawSize>
 		</graphicData>
 		<projectile>
-			<explosionRadius>1.9</explosionRadius>
+			<explosionRadius>2.1</explosionRadius>
 			<damageDef>BombACII</damageDef>
 			<speed>150</speed>
 		</projectile>
@@ -820,7 +886,7 @@
 		<defName>ShipTurret_ACIII</defName>
 		<label>artillery turret</label>
 		<designatorDropdown>ShipTurrets_AC</designatorDropdown>
-		<description>A capital-class turret that rapidly accelerates a stream of massive uranium slugs. Requires ammunition, but costs zero energy and very little heat to fire. Only useful at close range.\n\nWill vent heat to the surrounding room if no heatsink capacity is available.</description>
+		<description>A capital-class turret that rapidly accelerates a stream of massive uranium slugs. Requires ammunition, but costs zero energy and very little heat to fire. Only useful at close range.\n\nRequires sufficient stored power and heat capacity to function.</description>
 		<graphicData>
 			<texPath>Things/Building/Ship/HardpointYellow</texPath>
 			<drawSize>(5,5)</drawSize>
@@ -976,7 +1042,7 @@
 		<defName>ShipTurret_Laser</defName>
 		<label>laser turret</label>
 		<designatorDropdown>ShipTurrets_Laser</designatorDropdown>
-		<description>A starship turret that fires a powerful laser. While it can inflict devastating damage, it is only usable at short range. Can be set to intercept torpedoes rather than firing on the enemy ship.\n\nWill vent heat to the surrounding room if no heatsink capacity is available.</description>
+		<description>A starship turret that fires a powerful laser. While it can inflict devastating damage, it is only usable at short range. Can be set to intercept torpedoes rather than firing on the enemy ship.\n\nRequires sufficient stored power and heat capacity to function.</description>
 		<graphicData>
 			<texPath>Things/Building/Ship/HardpointRed</texPath>
 		</graphicData>
@@ -1030,7 +1096,7 @@
 				<verbClass>Verb_LaunchProjectileShip</verbClass>
 				<hasStandardCommand>true</hasStandardCommand>
 				<range>500</range>
-				<minRange>29.9</minRange>
+				<minRange>31.9</minRange>
 				<warmupTime>0</warmupTime>
 				<forcedMissRadius>1</forcedMissRadius>
 				<noiseRadius>4</noiseRadius>
@@ -1057,7 +1123,7 @@
 		<thingClass>Projectile_SoSFake</thingClass>
 		<projectile>
 			<damageDef>Bomb</damageDef>
-			<speed>400</speed>
+			<speed>150</speed>
 			<explosionRadius>0</explosionRadius>
 			<soundHitThickRoof>Artillery_HitThickRoof</soundHitThickRoof>
 		</projectile>
@@ -1076,7 +1142,7 @@
 		<projectile>
 			<explosionRadius>1.9</explosionRadius>
 			<damageDef>ShipLaserSmall</damageDef>
-			<speed>400</speed>
+			<speed>100</speed>
 		</projectile>
 	</ThingDef>
 	<ThingDef ParentName="BaseGrenadeProjectile">
@@ -1154,7 +1220,7 @@
 		<defName>ShipTurret_Laser_Large</defName>
 		<label>large laser turret</label>
 		<designatorDropdown>ShipTurrets_Laser</designatorDropdown>
-		<description>A cruiser-sized turret that fires a powerful laser. While it can inflict devastating damage, it is only usable at short range.\n\nWill vent heat to the surrounding room if no heatsink capacity is available.</description>
+		<description>A large turret that fires a powerful laser. While it can inflict devastating damage, it is only usable at short range.\n\nRequires sufficient stored power and heat capacity to function.</description>
 		<graphicData>
 			<texPath>Things/Building/Ship/HardpointRed</texPath>
 			<drawSize>(3,3)</drawSize>
@@ -1271,7 +1337,7 @@
 		<defName>ShipTurret_Plasma</defName>
 		<label>plasma turret</label>
 		<designatorDropdown>ShipTurrets_Plasma</designatorDropdown>
-		<description>A starship turret that fires a burst of superheated plasma. This balanced weapon can be used at up to medium range.\n\nWill vent heat to the surrounding room if no heatsink capacity is available.</description>
+		<description>A starship turret that fires a burst of superheated plasma. This balanced weapon can be used at up to medium range.\n\nRequires sufficient stored power and heat capacity to function.</description>
 		<graphicData>
 			<texPath>Things/Building/Ship/HardpointGreen</texPath>
 		</graphicData>
@@ -1325,7 +1391,7 @@
 				<verbClass>Verb_LaunchProjectileShip</verbClass>
 				<hasStandardCommand>true</hasStandardCommand>
 				<range>1000</range>
-				<minRange>29.9</minRange>
+				<minRange>31.9</minRange>
 				<warmupTime>1.5</warmupTime>
 				<forcedMissRadius>1</forcedMissRadius>
 				<noiseRadius>4</noiseRadius>
@@ -1388,7 +1454,7 @@
 		<projectile>
 			<damageDef>ShipPlasmaSmall</damageDef>
 			<speed>200</speed>
-			<explosionRadius>4.9</explosionRadius>
+			<explosionRadius>3.3</explosionRadius>
 			<flyOverhead>true</flyOverhead>
 			<soundHitThickRoof>Artillery_HitThickRoof</soundHitThickRoof>
 		</projectile>
@@ -1435,7 +1501,7 @@
 		<defName>ShipTurret_Plasma_Large</defName>
 		<label>large plasma turret</label>
 		<designatorDropdown>ShipTurrets_Plasma</designatorDropdown>
-		<description>A cruiser-sized turret that fires a burst of superheated plasma. This balanced weapon can be used at up to medium range.\n\nWill vent heat to the surrounding room if no heatsink capacity is available.</description>
+		<description>A large turret that fires a burst of superheated plasma. This balanced weapon can be used at up to medium range.\n\nRequires sufficient stored power and heat capacity to function.</description>
 		<graphicData>
 			<texPath>Things/Building/Ship/HardpointGreen</texPath>
 			<drawSize>(3,3)</drawSize>
@@ -1573,7 +1639,7 @@
 		<defName>ShipTurret_Kinetic</defName>
 		<label>railgun turret</label>
 		<designatorDropdown>ShipTurrets_Kinetic</designatorDropdown>
-		<description>A starship turret that accelerates metal slugs to relativistic speeds. Its tracking system excels at striking distant targets, but becomes wildly inaccurate at close range.\n\nWill vent heat to the surrounding room if no heatsink capacity is available.</description>
+		<description>A starship turret that accelerates metal slugs to relativistic speeds. Can hit targets at long range.\n\nRequires sufficient stored power and heat capacity to function.</description>
 		<comps>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
@@ -1624,7 +1690,7 @@
 				<verbClass>Verb_LaunchProjectileShip</verbClass>
 				<hasStandardCommand>true</hasStandardCommand>
 				<range>1500</range>
-				<minRange>29.9</minRange>
+				<minRange>31.9</minRange>
 				<warmupTime>0.5</warmupTime>
 				<forcedMissRadius>1</forcedMissRadius>
 				<noiseRadius>4</noiseRadius>
@@ -1689,7 +1755,7 @@
 		<projectile>
 			<damageDef>BombKinetic</damageDef>
 			<speed>500</speed>
-			<explosionRadius>2.9</explosionRadius>
+			<explosionRadius>2.3</explosionRadius>
 			<flyOverhead>true</flyOverhead>
 			<soundHitThickRoof>Artillery_HitThickRoof</soundHitThickRoof>
 		</projectile>
@@ -1726,7 +1792,7 @@
 		<defName>ShipTurret_Kinetic_Large</defName>
 		<label>large railgun turret</label>
 		<designatorDropdown>ShipTurrets_Kinetic</designatorDropdown>
-		<description>A cruiser-sized turret that accelerates metal slugs to relativistic speeds. Its tracking system excels at striking distant targets, but becomes wildly inaccurate at close range.\n\nWill vent heat to the surrounding room if no heatsink capacity is available.</description>
+		<description>A large turret that accelerates metal slugs to relativistic speeds. Capable of inaccurate fire at very long range.\n\nRequires sufficient stored power and heat capacity to function.</description>
 		<comps>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
@@ -2365,8 +2431,6 @@
 			</damageData>
 		</graphicData>
 		<altitudeLayer>WorldClipper</altitudeLayer>
-		<passability>PassThroughOnly</passability>
-		<fillPercent>0.4</fillPercent>
 		<constructionSkillPrerequisite>10</constructionSkillPrerequisite>
 		<comps>
 			<li Class="CompProperties_Flickable"/>
@@ -2395,7 +2459,7 @@
 		<comps>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
-				<heatPerPulse>1</heatPerPulse>
+				<heatPerPulse>0</heatPerPulse>
 				<energyToFire>0</energyToFire>
 				<optRange>300</optRange>
 				<maxRange>300</maxRange>
@@ -2431,7 +2495,7 @@
 		<comps>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
-				<heatPerPulse>1</heatPerPulse>
+				<heatPerPulse>0</heatPerPulse>
 				<energyToFire>0</energyToFire>
 				<optRange>300</optRange>
 				<maxRange>300</maxRange>
@@ -2467,7 +2531,7 @@
 		<comps>
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
-				<heatPerPulse>1</heatPerPulse>
+				<heatPerPulse>0</heatPerPulse>
 				<energyToFire>0</energyToFire>
 				<optRange>300</optRange>
 				<maxRange>300</maxRange>
@@ -2491,6 +2555,167 @@
 			<ComponentSpacer>3</ComponentSpacer>
 		</costList>
 	</ThingDef>
+	<!-- debris -->
+	<ThingDef ParentName="BaseGrenadeProjectile">
+		<defName>Proj_ShipDebrisA</defName>
+		<label>ship debris</label>
+		<thingClass>Projectile_ExplosiveShipDebris</thingClass>
+		<graphicData>
+			<texPath>Things/Item/Chunk/ChunkSlag/MetalDebrisA</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+			<drawSize>(2,2)</drawSize>
+		</graphicData>
+		<projectile>
+			<explosionRadius>2.9</explosionRadius>
+			<damageDef>BombShipDebrisLarge</damageDef>
+			<speed>70</speed>
+		</projectile>
+	</ThingDef>
+	<ThingDef ParentName="BaseGrenadeProjectile">
+		<defName>Proj_ShipDebrisB</defName>
+		<label>ship debris</label>
+		<thingClass>Projectile_ExplosiveShipDebris</thingClass>
+		<graphicData>
+			<texPath>Things/Item/Chunk/ChunkSlag/MetalDebrisB</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+			<drawSize>(1.5,1.5)</drawSize>
+		</graphicData>
+		<projectile>
+			<explosionRadius>1.9</explosionRadius>
+			<damageDef>BombShipDebris</damageDef>
+			<speed>85</speed>
+		</projectile>
+	</ThingDef>
+	<ThingDef ParentName="BaseGrenadeProjectile">
+		<defName>Proj_ShipDebrisC</defName>
+		<label>ship debris</label>
+		<thingClass>Projectile_ExplosiveShipDebris</thingClass>
+		<graphicData>
+			<texPath>Things/Item/Chunk/ChunkSlag/MetalDebrisC</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+			<drawSize>(1,1)</drawSize>
+		</graphicData>
+		<projectile>
+			<explosionRadius>1.1</explosionRadius>
+			<damageDef>BombShipDebris</damageDef>
+			<speed>100</speed>
+		</projectile>
+	</ThingDef>
+	<ThingDef ParentName="BaseGrenadeProjectile">
+		<defName>Proj_ShipDebrisD</defName>
+		<label>ship debris</label>
+		<thingClass>Projectile_ExplosiveShipDebris</thingClass>
+		<graphicData>
+			<texPath>Things/Special/DropPod</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+			<drawSize>(1,1)</drawSize>
+		</graphicData>
+		<projectile>
+			<explosionRadius>1.9</explosionRadius>
+			<damageDef>BombShipDebris</damageDef>
+			<speed>85</speed>
+		</projectile>
+	</ThingDef>
+	<ThingDef ParentName="BaseGrenadeProjectile">
+		<defName>Proj_ShipRockA</defName>
+		<label>ship debris</label>
+		<thingClass>Projectile_ExplosiveShipDebris</thingClass>
+		<graphicData>
+			<texPath>Things/Item/Chunk/ChunkStone/RockLowA</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+			<drawSize>(2,2)</drawSize>
+			<color>(105,95,97)</color>
+		</graphicData>
+		<projectile>
+			<explosionRadius>2.9</explosionRadius>
+			<damageDef>BombShipDebrisLarge</damageDef>
+			<speed>70</speed>
+		</projectile>
+	</ThingDef>
+	<ThingDef ParentName="BaseGrenadeProjectile">
+		<defName>Proj_ShipRockB</defName>
+		<label>ship debris</label>
+		<thingClass>Projectile_ExplosiveShipDebris</thingClass>
+		<graphicData>
+			<texPath>Things/Item/Chunk/ChunkStone/RockLowB</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+			<drawSize>(1.5,1.5)</drawSize>
+			<color>(105,95,97)</color>
+		</graphicData>
+		<projectile>
+			<explosionRadius>1.9</explosionRadius>
+			<damageDef>BombShipDebris</damageDef>
+			<speed>85</speed>
+		</projectile>
+	</ThingDef>
+	<ThingDef ParentName="BaseGrenadeProjectile">
+		<defName>Proj_ShipRockC</defName>
+		<label>ship debris</label>
+		<thingClass>Projectile_ExplosiveShipDebris</thingClass>
+		<graphicData>
+			<texPath>Things/Item/Chunk/ChunkStone/RockLowC</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+			<drawSize>(1,1)</drawSize>
+			<color>(105,95,97)</color>
+		</graphicData>
+		<projectile>
+			<explosionRadius>1.1</explosionRadius>
+			<damageDef>BombShipDebris</damageDef>
+			<speed>100</speed>
+		</projectile>
+	</ThingDef>
+	<DamageDef Name="BombShipDebris">
+		<defName>BombShipDebris</defName>
+		<label>bomb</label>
+		<workerClass>DamageWorker_AddInjury</workerClass>
+		<externalViolence>true</externalViolence>
+		<isExplosive>true</isExplosive>
+		<deathMessage>{0} has died in a collision.</deathMessage>
+		<hediff>Shredded</hediff>
+		<hediffSolid>Crack</hediffSolid>
+		<harmAllLayersUntilOutside>true</harmAllLayersUntilOutside>
+		<impactSoundType>Blunt</impactSoundType>
+		<armorCategory>Sharp</armorCategory>
+		<minDamageToFragment>15</minDamageToFragment>
+		<defaultDamage>50</defaultDamage>
+		<defaultStoppingPower>5</defaultStoppingPower>
+		<defaultArmorPenetration>0.7</defaultArmorPenetration>
+		<buildingDamageFactor>4</buildingDamageFactor>
+		<plantDamageFactor>4</plantDamageFactor>
+		<explosionAffectOutsidePartsOnly>false</explosionAffectOutsidePartsOnly>
+		<explosionHeatEnergyPerCell>5</explosionHeatEnergyPerCell>
+		<explosionCellFleck>BlastDry</explosionCellFleck>
+		<explosionColorCenter>(1, 0.5, 0.3)</explosionColorCenter>
+		<explosionColorEdge>(0.6, 0.5, 0.4)</explosionColorEdge>
+		<soundExplosion>Explosion_Bomb</soundExplosion>
+		<combatLogRules>Damage_Bomb</combatLogRules>
+	</DamageDef>
+	<DamageDef Name="BombShipDebrisLarge">
+		<defName>BombShipDebrisLarge</defName>
+		<label>bomb</label>
+		<workerClass>DamageWorker_AddInjury</workerClass>
+		<externalViolence>true</externalViolence>
+		<isExplosive>true</isExplosive>
+		<deathMessage>{0} has died in a collision.</deathMessage>
+		<hediff>Shredded</hediff>
+		<hediffSolid>Crack</hediffSolid>
+		<harmAllLayersUntilOutside>true</harmAllLayersUntilOutside>
+		<impactSoundType>Blunt</impactSoundType>
+		<armorCategory>Sharp</armorCategory>
+		<minDamageToFragment>15</minDamageToFragment>
+		<defaultDamage>100</defaultDamage>
+		<defaultStoppingPower>5</defaultStoppingPower>
+		<defaultArmorPenetration>0.7</defaultArmorPenetration>
+		<buildingDamageFactor>4</buildingDamageFactor>
+		<plantDamageFactor>4</plantDamageFactor>
+		<explosionAffectOutsidePartsOnly>false</explosionAffectOutsidePartsOnly>
+		<explosionHeatEnergyPerCell>5</explosionHeatEnergyPerCell>
+		<explosionCellFleck>BlastDry</explosionCellFleck>
+		<explosionColorCenter>(1, 0.5, 0.3)</explosionColorCenter>
+		<explosionColorEdge>(0.6, 0.5, 0.4)</explosionColorEdge>
+		<soundExplosion>Explosion_Bomb</soundExplosion>
+		<combatLogRules>Damage_Bomb</combatLogRules>
+	</DamageDef>
 
 	<DamageDef ParentName="StunBase">
 		<defName>ShieldExplosion</defName>
@@ -2515,4 +2740,22 @@
 		<solidTime>0</solidTime>
 		<fadeOutTime>0.2</fadeOutTime>
 	</FleckDef>
+	
+  <ThingDef ParentName="MoteBase">
+    <defName>Mote_HeatsinkPurge</defName>
+    <thingClass>MoteAttached</thingClass>
+    <altitudeLayer>MoteOverhead</altitudeLayer>
+    <mote>
+      <fadeInTime>0.01</fadeInTime>
+      <solidTime>0</solidTime>
+      <fadeOutTime>0.4</fadeOutTime>
+      <growthRate>325</growthRate>
+    </mote>
+    <graphicData>
+      <texPath>Things/Mote/SoSHeatPurge</texPath>
+      <graphicClass>Graphic_MoteWithAgeSecs</graphicClass>
+      <shaderType>MoteGlow</shaderType>
+      <drawSize>(0.1, 0.1)</drawSize>
+    </graphicData>
+  </ThingDef>
 </Defs>

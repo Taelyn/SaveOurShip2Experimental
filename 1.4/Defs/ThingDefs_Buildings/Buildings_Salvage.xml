@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Defs>
 	<!-- hull -->
-	<ThingDef ParentName="BuildingBase">
+	<ThingDef ParentName="BuildingShipHullBase">
 		<defName>Ship_Beam_Wrecked</defName>
 		<label>wrecked hull</label>
 		<thingClass>Building</thingClass>
@@ -25,32 +25,26 @@
 			</damageData>
 		</graphicData>
 		<uiIconPath>Things/Building/Ship/ShipBeamModular_north</uiIconPath>
-		<altitudeLayer>Building</altitudeLayer>
-		<passability>Impassable</passability>
-		<blockWind>true</blockWind>
-		<castEdgeShadows>true</castEdgeShadows>
-		<fillPercent>1</fillPercent>
-		<blockLight>true</blockLight>
-		<canOverlapZones>false</canOverlapZones>
 		<statBases>
 			<WorkToBuild>1600</WorkToBuild>
 			<MaxHitPoints>500</MaxHitPoints>
 			<Flammability>0</Flammability>
 		</statBases>
 		<tickerType>Normal</tickerType>
-		<description>The outer structural elements of a ship's hull. Damaged beyond repair.</description>
+		<description>The outer structural elements of a ship's hull that have been damaged beyond repair. No longer spaceworthy.</description>
 		<placingDraggableDimensions>1</placingDraggableDimensions>
 		<comps>
 			<li Class="CompProperties_SoShipPart">
 				<isHull>true</isHull>
+				<wreckage>true</wreckage>
+				<canLight>true</canLight>
+				<light>Ship_Beam_Light</light>
+				<lightPower>15</lightPower>
+				<sunLightPower>2500</sunLightPower>
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTransmitter</compClass>
 				<transmitsPower>true</transmitsPower>
-			</li>
-			<li Class="CompProperties_RoofMe">
-				<wreckage>true</wreckage>
-				<roof>false</roof>
 			</li>
 		</comps>
 		<rotatable>false</rotatable>
@@ -64,14 +58,7 @@
 			<Steel>8</Steel>
 			<Plasteel>2</Plasteel>
 		</costList>
-		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
-		<staticSunShadowHeight>1.0</staticSunShadowHeight>
 		<designationHotKey>Misc1</designationHotKey>
-		<holdsRoof>true</holdsRoof>
-		<leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
-		<killedLeavings>
-			<ChunkSlagSteel>1</ChunkSlagSteel>
-		</killedLeavings>
 	</ThingDef>
 	<!-- hull misc -->
 	<ThingDef ParentName="BuildingBase">
@@ -100,6 +87,7 @@
 		<comps>
 			<li Class="CompProperties_SoShipPart">
 				<isHull>true</isHull>
+				<wreckage>true</wreckage>
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTrader</compClass>
@@ -107,10 +95,6 @@
 				<transmitsPower>true</transmitsPower>
 			</li>
 			<li Class="CompProperties_Forbiddable"/>
-			<li Class="CompProperties_RoofMe">
-				<wreckage>true</wreckage>
-				<roof>false</roof>
-			</li>
 		</comps>
 		<designationHotKey>Misc2</designationHotKey>
 		<statBases>
@@ -182,10 +166,7 @@
 		<comps>
 			<li Class="CompProperties_SoShipPart">
 				<isPlating>true</isPlating>
-			</li>
-			<li Class="CompProperties_RoofMe">
 				<wreckage>true</wreckage>
-				<roof>true</roof>
 			</li>
 		</comps>
 		<placeWorkers>

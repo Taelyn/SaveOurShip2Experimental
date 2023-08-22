@@ -10,15 +10,14 @@ using HarmonyLib;
 using SaveOurShip2;
 using RimworldMod;
 using UnityEngine;
+using System.Net.NetworkInformation;
+using Verse.Noise;
+using MonoMod.Utils;
 
 namespace RimWorld
 {
-    [StaticConstructorOnStartup]
     public class Building_ShipAirlock : Building_Door
     {
-        public static ThingDef dockWallDef = ThingDef.Named("ShipAirlockBeamWall");
-        public static ThingDef insideDef = ThingDef.Named("ShipAirlockBeamTile");
-        public static ThingDef dockDef = ThingDef.Named("ShipAirlockBeam");
         List<Building> extenders = new List<Building>();
 
         public ShipHeatMapComp mapComp;
@@ -26,7 +25,9 @@ namespace RimWorld
         public bool hacked = false;
         public bool failed = false;
         public bool docked = false;
-        int polarity = 0;
+        public Building First;
+        public Building Second;
+        public int firstRot = -1; //doors dont have normal rot so this is used for extender gfx
         int dist = 0;
         int startTick = 0;
 
@@ -100,7 +101,7 @@ namespace RimWorld
         {
             foreach (IntVec3 pos in GenAdj.CellsAdjacentCardinal(this))
             {
-                Room room = pos.GetRoom(this.Map);
+                Room room = pos.GetRoom(Map);
                 if (room != null && (room.OpenRoofCount > 0 || room.TouchesMapEdge))
                 {
                     return true;
@@ -133,6 +134,7 @@ namespace RimWorld
             Scribe_Values.Look<bool>(ref docked, "docked", false);
             Scribe_Values.Look<int>(ref dist, "dist", 0);
             Scribe_Values.Look<int>(ref startTick, "startTick", 0);
+            Scribe_Values.Look<int>(ref firstRot, "firstRot", -1);
             Scribe_Collections.Look<Building>(ref extenders, "extenders", LookMode.Reference);
         }
         public override void SpawnSetup(Map map, bool respawningAfterLoad)
@@ -141,12 +143,13 @@ namespace RimWorld
             mapComp = this.Map.GetComponent<ShipHeatMapComp>();
             unfoldComp = this.TryGetComp<UnfoldComponent>();
         }
-        //docking - doors dont have proper rot, this could be remade but would need components for extenders, etc.
+
+        //docking - doors dont have proper rot
         public override void Destroy(DestroyMode mode = DestroyMode.Vanish)
         {
             if (docked)
             {
-                UnDock();
+                DeSpawnDock();
             }
             base.Destroy(mode);
         }
@@ -157,8 +160,10 @@ namespace RimWorld
             if (startTick > 0 && Find.TickManager.TicksGame > startTick)
             {
                 startTick = 0;
-                if (!mapComp.InCombat)
-                    Dock();
+                if (!mapComp.InCombat && CanDock())
+                {
+                    SpawnDock();
+                }
             }
         }
         public override IEnumerable<Gizmo> GetGizmos()
@@ -167,79 +172,94 @@ namespace RimWorld
             {
                 yield return g;
             }
-            if (this.Faction == Faction.OfPlayer && (Outerdoor() || docked))
+            if (Faction == Faction.OfPlayer && (Outerdoor() || docked) && HasDocking())
             {
-                IntVec3 facing = this.Rotation.FacingCell;
-                IntVec3 rightSide = this.Rotation.RighthandCell;
-
-                Building b1 = (this.Position - rightSide).GetFirstBuilding(this.Map);
-                Building b2 = (this.Position + rightSide).GetFirstBuilding(this.Map);
-                if (HasDocking(b1, b2))
+                bool canDock = CanDock();
+                Command_Toggle toggleDock = new Command_Toggle
                 {
-                    Command_Toggle toggleDock = new Command_Toggle
+                    toggleAction = delegate
                     {
-                        toggleAction = delegate
+                        if (!docked && canDock)
                         {
-                            if (!docked)
-                            {
-                                startTick = Find.TickManager.TicksGame + 170;
-                                unfoldComp.Target = (dist - 1) * 0.33f;
-                            }
-                            else
-                                UnDock();
-                        },
-                        defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipInsideToggleDock"),
-                        defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipInsideToggleDockDesc"),
-                        isActive = () => docked
-                    };
-                    if (docked)
-                        toggleDock.icon = ContentFinder<Texture2D>.Get("UI/DockingOn");
-                    else
-                        toggleDock.icon = ContentFinder<Texture2D>.Get("UI/DockingOff");
+                            float d = (dist - 1) * 0.3334f;
+                            startTick = Find.TickManager.TicksGame + (int)(200 * d);
+                            unfoldComp.Target = d;
+                        }
+                        else
+                        {
+                            DeSpawnDock();
+                        }
+                    },
+                    defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipInsideToggleDock"),
+                    defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipInsideToggleDockDesc"),
+                    isActive = () => docked
+                };
+                if (docked)
+                    toggleDock.icon = ContentFinder<Texture2D>.Get("UI/DockingOn");
+                else
+                    toggleDock.icon = ContentFinder<Texture2D>.Get("UI/DockingOff");
 
-                    if (startTick > 0 || mapComp.InCombat || !powerComp.PowerOn || !CanDock(facing, rightSide))
-                    {
-                        toggleDock.Disable();
-                    }
-                    yield return toggleDock;
+                if (startTick > 0 || mapComp.InCombat || !powerComp.PowerOn || !canDock)
+                {
+                    toggleDock.Disable();
                 }
+                yield return toggleDock;
             }
         }
-        // Checks if airlock is surrounded by docking beams.
-        public bool HasDocking(Building b1, Building b2)
+        public bool HasDocking() //check if airlock has docking beams
         {
-            //check LR for extender, same rot
-            if (b1 != null && b2 != null && b1.def == dockDef && b2.def == dockDef)
+            for (int i = 0; i < 2; i++) //find first extender, check opposite for other, same rot, not facing airlock
             {
-                polarity = 0;
-                var r1 = b1.Rotation.AsByte;
-                var r2 = b2.Rotation.AsByte;
-                if ((this.Rotation.AsByte == 0 && r1 == 0 && r2 == 0) || (this.Rotation.AsByte == 1 && r1 == 1 && r2 == 1))
+                IntVec3 v = Position + GenAdj.CardinalDirections[i];
+                Thing first = v.GetFirstThingWithComp<CompSoShipDocking>(Map);
+                if (first == null)
+                    continue;
+                var firstComp = first.TryGetComp<CompSoShipDocking>();
+                if (firstComp.Props.extender)
                 {
-                    polarity = -1;
-                    return true;
-                }
-                else if ((this.Rotation.AsByte == 0 && r1 == 2 && r2 == 2) || (this.Rotation.AsByte == 1 && r1 == 3 && r2 == 3))
-                {
-                    polarity = 1;
-                    return true;
+                    if (i == first.Rotation.AsByte || i == first.Rotation.AsByte + 2) //cant face same or opp cardinal
+                        break;
+                    Thing second = (Position + GenAdj.CardinalDirections[i + 2]).GetFirstThingWithComp<CompSoShipDocking>(Map);
+                    if (second != null)
+                    {
+                        var secondComp = second.TryGetComp<CompSoShipDocking>();
+                        if (secondComp.Props.extender && first.Rotation == second.Rotation)
+                        {
+                            First = first as Building;
+                            firstRot = first.Rotation.AsInt;
+                            Second = second as Building;
+                            firstComp.dockParent = this;
+                            secondComp.dockParent = this;
+                            return true;
+                        }
+                    }
+                    break;
                 }
             }
+            First = null;
+            Second = null;
+            firstRot = -1;
             return false;
         }
-        public bool CanDock(IntVec3 facing, IntVec3 rightSide)
+        public bool CanDock() //check if all clear, set dist
         {
-            //check if all clear, set dist
             if (docked)
                 return true;
+            if (First == null || First.Destroyed || Second == null || Second.Destroyed)
+            {
+                unfoldComp.Target = 0.0f;
+                ResetDock();
+                return false;
+            }
             dist = 0;
             for (int i = 1; i < 4; i++)
             {
-                IntVec3 center = this.Position + facing * i * polarity;
-                IntVec3 loc1 = center - rightSide;
-                IntVec3 loc3 = center + rightSide;
-                var grid = this.Map.thingGrid;
-                if (grid.ThingsAt(loc1).Any() || grid.ThingsAt(center).Any() || grid.ThingsAt(loc3).Any())
+                IntVec3 offset = GenAdj.CardinalDirections[First.Rotation.AsByte] * -i;
+                IntVec3 center = Position + offset;
+                IntVec3 first = First.Position + offset;
+                IntVec3 second = Second.Position + offset;
+                var grid = Map.thingGrid;
+                if (grid.ThingsAt(first).Any() || grid.ThingsAt(center).Any() || grid.ThingsAt(second).Any())
                 {
                     if (i == 1)
                         return false;
@@ -250,52 +270,69 @@ namespace RimWorld
             dist = 4;
             return true;
         }
-        public void Dock()
+        public void SpawnDock()
         {
+            IntVec3 rot = GenAdj.CardinalDirections[First.Rotation.AsByte];
             //place fake walls, floor, extend
-            IntVec3 facing = this.Rotation.FacingCell;
-            IntVec3 rightSide = this.Rotation.RighthandCell;
-            
             for (int i = 1; i < dist; i++)
             {
-                IntVec3 center = this.Position + facing * i * polarity;
+                IntVec3 offset = rot * -i;
                 Thing thing;
-                thing = ThingMaker.MakeThing(dockWallDef);
-                GenSpawn.Spawn(thing, center - rightSide, this.Map);
+                thing = ThingMaker.MakeThing(ResourceBank.ThingDefOf.ShipAirlockBeamWall);
+                GenSpawn.Spawn(thing, First.Position + offset, Map);
+                thing.TryGetComp<CompSoShipDocking>().dockParent = this;
                 extenders.Add(thing as Building);
-                thing = ThingMaker.MakeThing(insideDef);
-                GenSpawn.Spawn(thing, center, this.Map);
+                thing = ThingMaker.MakeThing(ResourceBank.ThingDefOf.ShipAirlockBeamTile);
+                GenSpawn.Spawn(thing, Position + offset, Map);
+                thing.TryGetComp<CompSoShipDocking>().dockParent = this;
                 extenders.Add(thing as Building);
-                thing = ThingMaker.MakeThing(dockWallDef);
-                GenSpawn.Spawn(thing, center + rightSide, this.Map);
+                thing = ThingMaker.MakeThing(ResourceBank.ThingDefOf.ShipAirlockBeamWall);
+                GenSpawn.Spawn(thing, Second.Position + offset, Map);
+                thing.TryGetComp<CompSoShipDocking>().dockParent = this;
                 extenders.Add(thing as Building);
             }
+            //set temp
+            Room room = (Position - rot).GetRoom(Map);
+            if (room != null && !room.UsesOutdoorTemperature)
+                room.Temperature = (Position + rot).GetRoom(Map).Temperature;
             docked = true;
-            //Log.Message($"Dock R={Rotation} F={facing} polarity={polarity} dist={dist} spawned={extenders.Count}");
         }
-        public void UnDock()
+        public void DeSpawnDock(bool force = false)
         {
+            unfoldComp.Target = 0.0f;
             if (extenders.Any())
             {
-                //Log.Message($"UnDock R={Rotation} polarity={polarity} dist={dist} spawned={extenders.Count}");
                 if (extenders.Count > 3)
                 {
-                    FleckMaker.ThrowDustPuff(extenders[extenders.Count - 1].Position, this.Map, 1f);
-                    FleckMaker.ThrowDustPuff(extenders[extenders.Count - 3].Position, this.Map, 1f);
+                    FleckMaker.ThrowDustPuff(extenders[extenders.Count - 1].Position, Map, 1f);
+                    FleckMaker.ThrowDustPuff(extenders[extenders.Count - 3].Position, Map, 1f);
                 }
                 List<Building> toDestroy = new List<Building>();
                 foreach (Building building in extenders.Where(b => !b.Destroyed))
                 {
+                    if (!force)
+                    {
+                        var comp = building.TryGetComp<CompSoShipDocking>();
+                        if (comp != null)
+                            comp.removedByDock = true;
+                    }
                     toDestroy.Add(building);
                 }
                 foreach (Building building in toDestroy)
                 {
-                    building.Destroy();
+                    if (!building.Destroyed)
+                        building.Destroy();
                 }
-                unfoldComp.Target = 0.0f;
-                docked = false;
                 extenders.Clear();
             }
+            docked = false;
+        }
+        public void ResetDock()
+        {
+            First = null;
+            Second = null;
+            firstRot = -1;
+            unfoldComp.extension = 0.0f;
         }
     }
 }

@@ -59,6 +59,7 @@ namespace SaveOurShip2
 
 		public static Texture2D PowerTex = SolidColorMaterials.NewSolidColorTexture(new Color(0.45f, 0.425f, 0.1f));
 		public static Texture2D HeatTex = SolidColorMaterials.NewSolidColorTexture(new Color(0.5f, 0.1f, 0.1f));
+		public static Texture2D DepletionTex = SolidColorMaterials.NewSolidColorTexture(new Color(0.37f, 0.37f, 0.37f));
 		public static Texture2D Splash = ContentFinder<Texture2D>.Get("SplashScreen");
 		public static Texture2D virtualPhoto = new Texture2D(2048, 2048, TextureFormat.RGB24, false);
 		public static RenderTexture target = new RenderTexture(2048, 2048, 16);
@@ -66,9 +67,9 @@ namespace SaveOurShip2
 
 
 		[DefOf]
-        public static class ThingDefOf
-        {
-            public static ThingDef MechaniteFire;
+		public static class ThingDefOf
+		{
+			public static ThingDef MechaniteFire;
 			public static ThingDef ShipArchotechSpore;
 			public static ThingDef Ship_Beam;
 			public static ThingDef Ship_Beam_Wrecked;
@@ -78,27 +79,50 @@ namespace SaveOurShip2
 			public static ThingDef ShipHullTileMech;
 			public static ThingDef ShipHullTileArchotech;
 			public static ThingDef ShipHullfoamTile;
-		}
+			public static ThingDef ShipTorpedo_HighExplosive;
+			public static ThingDef ShipTorpedo_EMP;
+			public static ThingDef ShipTorpedo_Antimatter;
+			public static ThingDef ShipAirlockBeamWall;
+			public static ThingDef ShipAirlockBeamTile;
+            public static ThingDef Cryptonest;
+            public static ThingDef CrittersleepCasket;
+            public static ThingDef CrittersleepCasketLarge;
+            public static ThingDef PersonalShuttle;
+            public static ThingDef ShipShuttleBay;
+			public static ThingDef ShipShuttleBayLarge;
+			public static ThingDef ShipSalvageBay;
+            public static ThingDef ShipConsoleScience;
+            public static ThingDef SoS2DummyObject;
+			public static ThingDef Mote_HeatsinkPurge;
+            public static ThingDef Proj_ShipDebrisA;
+            public static ThingDef Proj_ShipDebrisB;
+            public static ThingDef Proj_ShipDebrisC;
+            public static ThingDef Proj_ShipDebrisD;
+            public static ThingDef Proj_ShipRockA;
+            public static ThingDef Proj_ShipRockB;
+            public static ThingDef Proj_ShipRockC;
+        }
 
 		[DefOf]
-        public static class TerrainDefOf
-        {
-            public static TerrainDef EmptySpace;
+		public static class TerrainDefOf
+		{
+			public static TerrainDef EmptySpace;
 			public static TerrainDef FakeFloorInsideShip;
 			public static TerrainDef FakeFloorInsideShipMech;
 			public static TerrainDef FakeFloorInsideShipArchotech;
 			public static TerrainDef ShipWreckageTerrain;
 			public static TerrainDef FakeFloorInsideShipFoam;
-        }
+		}
+
 		[DefOf]
-        public static class RoofDefOf
-        {
+		public static class RoofDefOf
+		{
 			public static RoofDef RoofShip;
 		}
 
 		[DefOf]
-        public static class HediffDefOf
-        {
+		public static class HediffDefOf
+		{
 			public static HediffDef SpaceHypoxia;
 			public static HediffDef SoSArchotechLung;
 			public static HediffDef SoSArchotechSkin;
@@ -107,33 +131,36 @@ namespace SaveOurShip2
 		}
 
 		[DefOf]
-        public static class MemeDefOf
-        {
+		public static class MemeDefOf
+		{
+			[MayRequireIdeology]
 			public static MemeDef Structure_Archist;
 		}
 
 		[DefOf]
-        public static class BiomeDefOf
-        {
+		public static class BiomeDefOf
+		{
 			public static BiomeDef OuterSpaceBiome;
 		}
 
 		[DefOf]
-        public static class StorytellerDefOf
-        {
+		public static class StorytellerDefOf
+		{
 			public static StorytellerDef Sara;
 		}
 
 		[DefOf]
-        public static class ResearchProjectDefOf
-        {
+		public static class ResearchProjectDefOf
+		{
 			public static ResearchProjectDef ArchotechPillarA;
 			public static ResearchProjectDef ArchotechPillarB;
-		}
+            public static ResearchProjectDef ArchotechPillarC;
+            public static ResearchProjectDef ArchotechPillarD;
+        }
 
 		[DefOf]
 		public static class BackstoryDefOf
-        {
+		{
 			public static BackstoryDef SoSHologram;
 		}
 
@@ -141,6 +168,18 @@ namespace SaveOurShip2
 		public static class WeatherDefOf
 		{
 			public static WeatherDef OuterSpaceWeather;
-		}
-	}
+        }
+
+        [DefOf]
+        public static class GameConditionDefOf
+        {
+            public static GameConditionDef SpaceDebris;
+        }
+
+        [DefOf]
+		public static class SoundDefOf
+        {
+			public static SoundDef ShipPurgeHiss;
+        }
+    }
 }

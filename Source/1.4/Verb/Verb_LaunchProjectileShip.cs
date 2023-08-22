@@ -22,7 +22,7 @@ namespace RimWorld
                 if (base.EquipmentSource != null)
                 {
                     CompChangeableProjectilePlural comp = base.EquipmentSource.GetComp<CompChangeableProjectilePlural>();
-                    if (comp != null && comp.Loaded)
+                    if (comp != null && comp.LoadedNotPrevent)
                     {
                         return comp.Projectile;
                     }
@@ -46,7 +46,7 @@ namespace RimWorld
                     if (turret.heatComp.Props.groundProjectile != null)
                         projectile = turret.heatComp.Props.groundProjectile;
                 }
-                else if (turret.PointDefenseMode || (!turret.PlayerControlled && turret.heatComp.Props.pointDefense)) //remove registered torps/pods in range
+                else if (turret.PointDefenseMode) //remove registered torps/pods in range
                 {
                     PointDefense(turret);
                 }
@@ -101,23 +101,13 @@ namespace RimWorld
             else
                 projectile2.Launch(launcher, currentTarget.Cell, currentTarget.Cell, ProjectileHitFlags.None, false, equipment);
 
-            if (projectile.defName.Equals("Bullet_Fake_Laser") || projectile.defName.Equals("Bullet_Ground_Laser"))
+            if (projectile.defName.Equals("Bullet_Fake_Laser") || projectile.defName.Equals("Bullet_Ground_Laser") || projectile.defName.Equals("Bullet_Fake_Psychic"))
             {
                 ShipCombatLaserMote obj = (ShipCombatLaserMote)(object)ThingMaker.MakeThing(ThingDef.Named("ShipCombatLaserMote"));
                 obj.origin = drawPos;
                 obj.destination = currentTarget.Cell.ToVector3Shifted();
                 obj.large = this.caster.GetStatValue(StatDefOf.RangedWeapon_DamageMultiplier) > 1.0f;
-                obj.color = Color.red;
-                obj.Attach(launcher);
-                GenSpawn.Spawn(obj, launcher.Position, launcher.Map, 0);
-            }
-            else if (projectile.defName.Equals("Bullet_Fake_Psychic"))
-            {
-                ShipCombatLaserMote obj = (ShipCombatLaserMote)(object)ThingMaker.MakeThing(ThingDef.Named("ShipCombatLaserMote"));
-                obj.origin = drawPos;
-                obj.destination = currentTarget.Cell.ToVector3Shifted();
-                obj.large = this.caster.GetStatValue(StatDefOf.RangedWeapon_DamageMultiplier) > 1.0f;
-                obj.color = Color.green;
+                obj.color = turret.heatComp.Props.laserColor;
                 obj.Attach(launcher);
                 GenSpawn.Spawn(obj, launcher.Position, launcher.Map, 0);
             }
@@ -162,9 +152,8 @@ namespace RimWorld
                         {
                             if (t.Faction == Faction.OfPlayer)
                             {
-                                if (!player)
-                                    player = true;
-                                if (SaveOurShip2.ModSettings_SoS.easyMode)
+                                player = true;
+                                if (ModSettings_SoS.easyMode)
                                 {
                                     HealthUtility.DamageUntilDowned((Pawn)t, false);
                                     continue;
@@ -179,7 +168,7 @@ namespace RimWorld
                                 p.Kill(new DamageInfo(DamageDefOf.Bomb, 100f));
                             }
                         }
-                        if (player && SaveOurShip2.ModSettings_SoS.easyMode)
+                        if (player && ModSettings_SoS.easyMode)
                         {
                             return;
                         }
@@ -196,18 +185,28 @@ namespace RimWorld
         //projectiles register on turret map
         public void RegisterProjectile(Building_ShipTurret turret, LocalTargetInfo target, ThingDef spawnProjectile, IntVec3 burstLoc)
         {
+            var mapComp = caster.Map.GetComponent<ShipHeatMapComp>();
+
+            //inc acc if any manning pawn shooting or aicore
+            int accBoost = 0;
+            if (turret.heatComp.myNet.TacCons.Any(b => b.mannableComp.MannedNow))
+                accBoost = turret.heatComp.myNet.TacCons.Where(b => b.mannableComp.MannedNow).Max(b => b.mannableComp.ManningPawn.skills.GetSkill(SkillDefOf.Shooting).Level);
+            if (accBoost < 10 && turret.heatComp.myNet.AICores.Any())
+                accBoost = 10;
             ShipCombatProjectile proj = new ShipCombatProjectile
             {
                 turret = turret,
                 target = target,
                 range = 0,
+                //rangeAtStart = mapComp.Range,
                 spawnProjectile = spawnProjectile,
                 missRadius = this.verbProps.ForcedMissRadius,
+                accBoost = accBoost,
                 burstLoc = burstLoc,
                 speed = turret.heatComp.Props.projectileSpeed,
                 Map = turret.Map
             };
-            caster.Map.GetComponent<ShipHeatMapComp>().Projectiles.Add(proj);
+            mapComp.Projectiles.Add(proj);
         }
         public override bool CanHitTarget(LocalTargetInfo targ)
         {

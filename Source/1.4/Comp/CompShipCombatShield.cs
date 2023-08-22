@@ -16,10 +16,10 @@ namespace RimWorld
         private static readonly Material ShieldMaterial = MaterialPool.MatFrom("Things/Building/Ship/ShieldBubbleSOS", ShaderDatabase.MoteGlow);
         private static readonly Material ConeMaterial = MaterialPool.MatFrom("Other/ForceFieldCone", ShaderDatabase.MoteGlow);
         private static readonly MaterialPropertyBlock PropBlock = new MaterialPropertyBlock();
-        public static float HeatDamageMult = 3f;
+        public static float HeatDamageMult = 3.5f;
 
-        public float radiusSet=40;
-        public float radius=40;
+        public float radiusSet = -1;
+        public float radius = -1;
         public bool shutDown;
         private int lastIntercepted = -69;
         private float lastInterceptAngle;
@@ -35,6 +35,8 @@ namespace RimWorld
             powerComp = parent.TryGetComp<CompPowerTrader>();
             breakComp = parent.TryGetComp<CompBreakdownable>();
             parent.Map.GetComponent<ShipHeatMapComp>().Shields.Add(this);
+            if (radiusSet == -1)
+                radiusSet = radius = Props.shieldDefault;
         }
         public override void PostDeSpawn(Map map)
         {
@@ -44,7 +46,7 @@ namespace RimWorld
         public override void CompTick()
         {
             base.CompTick();
-            this.shutDown = breakComp.BrokenDown || !powerComp.PowerOn;
+            this.shutDown = breakComp.BrokenDown || !powerComp.PowerOn || Venting;
             if (!this.shutDown && Find.TickManager.TicksGame % 60 == 0)
             {			
                 float absDiff = Math.Abs(radius - radiusSet);
@@ -82,7 +84,9 @@ namespace RimWorld
         public virtual float CalcHeatGenerated(Projectile_ExplosiveShipCombat proj)
         {
             float heatGenerated = proj.DamageAmount * HeatDamageMult * Props.heatMultiplier;
-            heatGenerated *= CompShipCombatShield.ProjectileToMult.TryGetValue(proj.def, 1f);
+            heatGenerated *= ProjectileToMult.TryGetValue(proj.def, 1f);
+            if (proj is Projectile_ExplosiveShipDebris)
+                heatGenerated *= 10;
             return heatGenerated;
         }
 
@@ -95,13 +99,10 @@ namespace RimWorld
             if (proj is Projectile_ExplosiveShipCombatLaser || proj is Projectile_ExplosiveShipCombatPsychic)
             {
                 ShipCombatLaserMote obj = (ShipCombatLaserMote)(object)ThingMaker.MakeThing(ThingDef.Named("ShipCombatLaserMote"));
-                obj.origin = (Vector3)typeof(Projectile).GetField("origin", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(proj);
+                obj.origin = proj.origin;
                 obj.destination = proj.DrawPos;
-                if (proj is Projectile_ExplosiveShipCombatPsychic)
-                    obj.color = Color.green;
-                else
-                    obj.color = Color.red;
-                if ((float)typeof(Projectile).GetField("weaponDamageMultiplier", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(proj) > 1f)
+                obj.color = proj.Launcher.TryGetComp<CompShipHeat>().Props.laserColor;
+                if (proj.weaponDamageMultiplier > 1f)
                     obj.large = true;
                 obj.Attach(parent);
                 GenSpawn.Spawn(obj, proj.DrawPos.ToIntVec3(), proj.Map, 0);
@@ -109,7 +110,7 @@ namespace RimWorld
             if (!AddHeatToNetwork(heatGenerated))
             {
                 if (myNet != null)
-                    myNet.StorageUsed = myNet.StorageCapacity;
+                    AddHeatToNetwork(myNet.StorageCapacity - myNet.StorageUsed);
                 breakComp.DoBreakdown();
                 GenExplosion.DoExplosion(parent.Position, parent.Map, 1.9f, DamageDefOf.Flame, parent);
                 SoundDefOf.EnergyShield_Broken.PlayOneShot(new TargetInfo(parent));
@@ -118,7 +119,7 @@ namespace RimWorld
                 else
                     Messages.Message(TranslatorFormattedStringExtensions.Translate("ShipCombatShieldBroken"), parent, MessageTypeDefOf.NegativeEvent);
             }
-            if (powerComp != null && powerComp.PowerNet.CurrentStoredEnergy() > heatGenerated /20)
+            if (powerComp != null && powerComp.PowerNet.CurrentStoredEnergy() > heatGenerated / 20)
             {
                 foreach (CompPowerBattery bat in powerComp.PowerNet.batteryComps)
                 {
@@ -159,8 +160,8 @@ namespace RimWorld
             base.PostExposeData();
             Scribe_Values.Look(ref lastIntercepted, "lastIntercepted");
             Scribe_Values.Look(ref shutDown, "shutDown");
-            Scribe_Values.Look(ref radius, "radius",40);
-            Scribe_Values.Look(ref radiusSet, "radiusSet",40);
+            Scribe_Values.Look(ref radius, "radius", Props.shieldDefault);
+            Scribe_Values.Look(ref radiusSet, "radiusSet", Props.shieldDefault);
         }
         public override void PostDraw()
         {
@@ -222,7 +223,7 @@ namespace RimWorld
             {
                 action = delegate ()
                 {
-                    radiusSet = 40f;
+                    radiusSet = Props.shieldDefault;
                     powerComp.PowerOutput = -1500;
                     SoundDefOf.Tick_Tiny.PlayOneShotOnCamera(null);
                 },
@@ -259,7 +260,7 @@ namespace RimWorld
         {
             SoundDefOf.DragSlider.PlayOneShotOnCamera(null);
             radiusSet += radius;
-            radiusSet = Mathf.Clamp(radiusSet, 20f, 60f);
+            radiusSet = Mathf.Clamp(radiusSet, Props.shieldMin, Props.shieldMax);
         }
     }
 }
