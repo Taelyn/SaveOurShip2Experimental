@@ -29,7 +29,7 @@ namespace RimWorld
             {
                 if (mapComp.Cloaks.Any(c => c.active))
                 {
-                    disabled = true;
+                    disabled = false;
                 }
                 disabled = false;
                 return disabled;

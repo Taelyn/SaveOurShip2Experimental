@@ -29,7 +29,7 @@
 		<li>Ludeon.RimWorld.Biotech</li>
 	</loadAfter>
 	<incompatibleWith>
-		<li>ceteam.combatextended</li>
+		<!-- <li>ceteam.combatextended</li> -->
 		<li>rwmt.multiplayer</li>
 		<li>automatic.gunplay</li>
 		<li>mlie.yayoscombat3</li>

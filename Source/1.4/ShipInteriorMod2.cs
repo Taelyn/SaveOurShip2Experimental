@@ -390,8 +390,9 @@ namespace SaveOurShip2
 			orbiter.SetFaction(Faction.OfPlayer);
 			orbiter.Tile = FindWorldTile();
 			Find.WorldObjects.Add(orbiter);
-			Map map = MapGenerator.GenerateMap(size, orbiter, orbiter.MapGeneratorDef);
-			map.fogGrid.ClearAllFog();
+            //Map map = MapGenerator.GenerateMap(size, orbiter, orbiter.MapGeneratorDef);
+            Map map = MapGenerator.GenerateMap(new IntVec3(400, 1, 400), orbiter, orbiter.MapGeneratorDef);
+            map.fogGrid.ClearAllFog();
 			return map;
 		}
 		public static void GenerateImpactSite()
@@ -2143,10 +2144,10 @@ namespace SaveOurShip2
 					}
 				}
 				targetMap.zoneManager.RebuildZoneGrid();
-				sourceMap.zoneManager.RebuildZoneGrid();
+                sourceMap.zoneManager.RebuildZoneGrid();
 
-				//regen affected map layers
-				List<Section> sourceSec = new List<Section>();
+                //regen affected map layers
+                List<Section> sourceSec = new List<Section>();
 				foreach (IntVec3 pos in sourceArea)
 				{
 					var sec = sourceMap.mapDrawer.SectionAt(pos);
@@ -2471,7 +2472,7 @@ namespace SaveOurShip2
 						map.zoneManager.DeregisterZone(zone);
 				}
 				map.zoneManager.RebuildZoneGrid();
-				foreach (IntVec3 pos in map)
+                foreach (IntVec3 pos in map)
 				{
 					var sec = map.mapDrawer.SectionAt(pos);
 					if (!sourceSec.Contains(sec))
