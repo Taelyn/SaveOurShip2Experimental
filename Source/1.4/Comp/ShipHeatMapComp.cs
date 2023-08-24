@@ -951,7 +951,7 @@ namespace RimWorld
             float powerCapacity = 0;
             float powerRemaining = 0;
             //threat and engine power calcs
-			/*SC
+            /*SC
             foreach (Building_ShipBridge bridge in MapRootList)
             {
                 var ship = ShipsOnMapNew[bridge.Index];
@@ -978,6 +978,14 @@ namespace RimWorld
                 BuildingsCount += ship.Buildings.Count;
             }
 			*/
+            foreach (ShipCache ship in ShipsOnMap) //first engine rot
+            {
+                if (ship.Engines.Any())
+                {
+                    EngineRot = ship.Engines.FirstOrDefault().parent.Rotation.AsByte;
+                    break;
+                }
+            }
             foreach (ShipCache ship in ShipsOnMap) //SC rem
             {
                 if (ShipCombatMaster)
@@ -1045,9 +1053,6 @@ namespace RimWorld
                     else //cqc
                         threatPerSegment[0] += threat;
                 }
-                if (ship.Engines.FirstOrDefault() != null)
-                    EngineRot = ship.Engines.FirstOrDefault().parent.Rotation.AsByte;
-
                 foreach (var engine in ship.Engines)
                 {
                     if (engine.CanFire(EngineRot))
