@@ -183,7 +183,7 @@ namespace RimWorld
                         stringBuilder.AppendLine(TranslatorFormattedStringExtensions.Translate("ShipStatsShipMass", ShipMass));
                         stringBuilder.AppendLine(TranslatorFormattedStringExtensions.Translate("ShipStatsShipMaxTakeoff", ShipMaxTakeoff));
                         stringBuilder.AppendLine(TranslatorFormattedStringExtensions.Translate("ShipStatsShipEnergy", this.PowerComp.PowerNet.CurrentStoredEnergy(), capacity));
-                        stringBuilder.AppendLine(TranslatorFormattedStringExtensions.Translate("ShipStatsShipHeat", heatComp.myNet.StorageUsed, heatComp.myNet.StorageCapacity, (heatComp.myNet.Depletion > 0) ? (" ("+heatComp.myNet.Depletion+" depleted)") : ""));
+                        stringBuilder.AppendLine(TranslatorFormattedStringExtensions.Translate("ShipStatsShipHeat", heatComp.myNet.StorageUsed, heatComp.myNet.StorageCapacity, (heatComp.myNet.Depletion > 0) ? (" ("+ heatComp.myNet.StorageCapacityRaw + " maximum)") : ""));
                         stringBuilder.AppendLine();
                         stringBuilder.AppendLine(TranslatorFormattedStringExtensions.Translate("ShipStatsShipCombatRating", ShipThreat));
                         stringBuilder.AppendLine(TranslatorFormattedStringExtensions.Translate("ShipStatsShipCombatThrust", ShipThrust.ToString("F3")));
@@ -233,11 +233,11 @@ namespace RimWorld
                                 {
                                     return null;
                                 }
-                                if (target.Map != null && target.Map.Parent != null && target.Map.Parent.def.defName.Equals("ShipOrbiting"))
+                                if (target.Map != null && target.Map.Parent != null && target.Map.Parent.def == ResourceBank.WorldObjectDefOf.ShipOrbiting)
                                 {
                                     return null;
                                 }
-                                if (target.WorldObject != null && target.WorldObject.def.defName.Equals("ShipOrbiting"))
+                                if (target.WorldObject != null && target.WorldObject.def == ResourceBank.WorldObjectDefOf.ShipOrbiting)
                                     return null;
                                 if (target.WorldObject != null && (target.WorldObject is SpaceSite || target.WorldObject is MoonBase))
                                     return TranslatorFormattedStringExtensions.Translate("MustLaunchFromOrbit");
@@ -735,7 +735,7 @@ namespace RimWorld
                         }
                     }
                     //in graveyard, not player map - capture/retrieve
-                    else if (!this.Map.Parent.def.defName.Equals("ShipOrbiting"))
+                    else if (this.Map.Parent.def != ResourceBank.WorldObjectDefOf.ShipOrbiting)
                     {
                         Command_Action captureShip = new Command_Action
                         {
@@ -743,7 +743,7 @@ namespace RimWorld
                             {
                                 if (mapComp.ShipCombatOriginMap == null)
                                 {
-                                    Map m = ((MapParent)Find.WorldObjects.AllWorldObjects.Where(ob => ob.def.defName.Equals("ShipOrbiting")).FirstOrDefault()).Map;
+                                    Map m = ((MapParent)Find.WorldObjects.AllWorldObjects.Where(ob => ob.def == ResourceBank.WorldObjectDefOf.ShipOrbiting).FirstOrDefault()).Map;
                                     if (m == null)
                                         m = ShipInteriorMod2.GeneratePlayerShipMap(this.Map.Size);
                                     mapComp.ShipCombatOriginMap = m;
@@ -822,9 +822,9 @@ namespace RimWorld
 		{
 			if (this.CanLaunchNow)
 			{
-                if (Find.WorldObjects.AllWorldObjects.Any(ob => ob.def.defName.Equals("ShipOrbiting")))
+                if (Find.WorldObjects.AllWorldObjects.Any(ob => ob.def == ResourceBank.WorldObjectDefOf.ShipOrbiting))
                 {
-                    MapParent parent = ((MapParent)Find.WorldObjects.AllWorldObjects.Where(ob => ob.def.defName.Equals("ShipOrbiting")).FirstOrDefault());
+                    MapParent parent = ((MapParent)Find.WorldObjects.AllWorldObjects.Where(ob => ob.def == ResourceBank.WorldObjectDefOf.ShipOrbiting).FirstOrDefault());
                     Map m = parent.Map;
                     if(m==null)
                     {
@@ -898,13 +898,17 @@ namespace RimWorld
         {
             if (mapComp.MapRootListAll.Contains(this))
                 mapComp.MapRootListAll.Remove(this);
+            if (!mapComp.InCombat && !mapComp.MapRootList.NullOrEmpty() && mapComp.MapRootList.Contains(this))
+                mapComp.MapRootList.Remove(this);
             base.DeSpawn(mode);
         }
         public override void Destroy(DestroyMode mode = DestroyMode.Vanish)
         {
             if (mapComp.MapRootListAll.Contains(this))
                 mapComp.MapRootListAll.Remove(this);
-			/*SC if (Ship.Bridges.Any(b => b != this && !b.Destroyed)) //if last bridge remove ship or end combat
+            if (!mapComp.InCombat && !mapComp.MapRootList.NullOrEmpty() && mapComp.MapRootList.Contains(this))
+                mapComp.MapRootList.Remove(this);
+            /*SC if (Ship.Bridges.Any(b => b != this && !b.Destroyed)) //if last bridge remove ship or end combat
             {
                 if (!mapComp.InCombat)
                 {
@@ -962,7 +966,7 @@ namespace RimWorld
                     if (engine != null && engine.Props.takeOff)
                     {
                         fuelHad += engine.refuelComp.Fuel;
-                        if (engine.refuelComp.Props.fuelFilter.AllowedThingDefs.Contains(ThingDef.Named("ShuttleFuelPods")))
+                        if (engine.refuelComp.Props.fuelFilter.AllowedThingDefs.Contains(ResourceBank.ThingDefOf.ShuttleFuelPods))
                             fuelHad += engine.refuelComp.Fuel;
                     }
                     else if (rcs != null)
@@ -1011,7 +1015,7 @@ namespace RimWorld
                     ShipMass += (b.def.size.x * b.def.size.z) * 3;
                     if (b.TryGetComp<CompShipHeat>() != null)
                         ShipThreat += b.TryGetComp<CompShipHeat>().Threat;
-                    else if (b.def == ThingDef.Named("ShipSpinalAmplifier"))
+                    else if (b.def == ResourceBank.ThingDefOf.ShipSpinalAmplifier)
                         ShipThreat += 5;
                     var engine = b.TryGetComp<CompEngineTrail>();
                     if (engine != null)
@@ -1020,7 +1024,7 @@ namespace RimWorld
                         if (engine.Props.takeOff)
                         {
                             ShipMaxTakeoff += b.TryGetComp<CompRefuelable>().Props.fuelCapacity;
-                            if (b.TryGetComp<CompRefuelable>().Props.fuelFilter.AllowedThingDefs.Contains(ThingDef.Named("ShuttleFuelPods")))
+                            if (b.TryGetComp<CompRefuelable>().Props.fuelFilter.AllowedThingDefs.Contains(ResourceBank.ThingDefOf.ShuttleFuelPods))
                             {
                                 ShipMaxTakeoff += b.TryGetComp<CompRefuelable>().Props.fuelCapacity;
                             }

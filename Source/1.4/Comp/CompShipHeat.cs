@@ -48,7 +48,7 @@ namespace RimWorld
             string output = "";
             if (myNet != null)
             {
-                output += TranslatorFormattedStringExtensions.Translate("ShipHeatStored", Mathf.Round(myNet.StorageUsed), myNet.StorageCapacity);
+                output += TranslatorFormattedStringExtensions.Translate("ShipHeatStored", Mathf.Round(myNet.StorageUsed), myNet.StorageCapacity, myNet.StorageCapacityRaw);
                 if (myNet.RatioInNetworkRaw > 0.9f)
                     output += "\n<color=red>DANGER! Heat level critical!</color>";
                 if (Prefs.DevMode)
@@ -88,15 +88,16 @@ namespace RimWorld
             myNet.RemoveHeat(amount);
             return true;
         }
-        public void AddDepletionToNetwork(float amount)
+        public bool AddDepletionToNetwork(float amount)
         {
-            if (myNet != null)
-                myNet.AddDepletion(amount);
+            if (myNet == null || amount > AvailableCapacityInNetwork())
+                return false;
+            myNet.AddDepletion(amount);
+            return true;
         }
         public void RemoveDepletionFromNetwork(float amount)
         {
-            if (myNet != null)
-                myNet.RemoveDepletion(amount);
+            myNet?.RemoveDepletion(amount);
         }
         public float AvailableCapacityInNetwork()
         {

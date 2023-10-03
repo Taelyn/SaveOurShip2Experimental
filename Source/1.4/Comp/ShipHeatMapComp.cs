@@ -205,18 +205,18 @@ namespace RimWorld
         public int BurnTimer = 0;
         public int Heading; //+closer, -apart
         public int BuildingsCount;
-        public int totalThreat;
+        public float totalThreat;
         public float[] threatPerSegment = { 1, 1, 1, 1 };
         //SC cache
-        public bool BridgeDestroyed = false;//calls CheckForDetach
+        public bool BridgeDestroyed = false; //calls CheckForDetach
         public List<ShipCombatProjectile> Projectiles;
         public List<ShipCombatProjectile> TorpsInRange;
-        public List<Building> MapRootListAll = new List<Building>();//all bridges on map
-        public List<Building> MapRootList;//primary bridges //SC rem
+        public List<Building> MapRootListAll = new List<Building>(); //all bridges on map
+        public List<Building> MapRootList; //primary bridges //SC rem
         List<Building> cores = new List<Building>();
 
         public List<ShipCache> shipsOnMap; //SC rem
-        public List<ShipCache> ShipsOnMap//rebuild shipsOnMap cache if it is null //SC rem
+        public List<ShipCache> ShipsOnMap //rebuild shipsOnMap cache if it is null //SC rem
         {
             get
             {
@@ -587,8 +587,7 @@ namespace RimWorld
                 faction.TryAffectGoodwillWith(Faction.OfPlayer, -150);
 
             //spawn map
-            //ShipCombatMasterMap = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), new IntVec3(250, 1, 250), DefDatabase<WorldObjectDef>.GetNamed("ShipEnemy"));
-            ShipCombatMasterMap = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), new IntVec3(400, 1, 400), DefDatabase<WorldObjectDef>.GetNamed("ShipEnemy"));
+            ShipCombatMasterMap = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), new IntVec3(250, 1, 250), ResourceBank.WorldObjectDefOf.ShipEnemy);
             ((WorldObjectOrbitingShip)ShipCombatMasterMap.Parent).radius = radius;
             ((WorldObjectOrbitingShip)ShipCombatMasterMap.Parent).theta = theta;
             ((WorldObjectOrbitingShip)ShipCombatMasterMap.Parent).phi = phi;
@@ -688,7 +687,7 @@ namespace RimWorld
             var worldComp = Find.World.GetComponent<PastWorldUWO2>();
             List<Building_ShipAdvSensor> Sensors = worldComp.Sensors.Where(s => s.Map == this.map).ToList();
             List<Building_ShipAdvSensor> SensorsEnemy = worldComp.Sensors.Where(s => s.Map == MasterMapComp.map).ToList();
-            if (Sensors.Where(sensor => sensor.def.defName.Equals("Ship_SensorClusterAdv") && sensor.TryGetComp<CompPowerTrader>().PowerOn).Any())
+            if (Sensors.Where(sensor => sensor.def == ResourceBank.ThingDefOf.Ship_SensorClusterAdv && sensor.TryGetComp<CompPowerTrader>().PowerOn).Any())
             {
                 //ShipCombatMasterMap.fogGrid.ClearAllFog();
                 detectionLevel += 2;
@@ -699,7 +698,7 @@ namespace RimWorld
             {
                 if (Cloaks.Where(cloak => cloak.TryGetComp<CompPowerTrader>().PowerOn).Any())
                     detectionLevel -= 2;
-                if (SensorsEnemy.Where(sensor => sensor.def.defName.Equals("Ship_SensorClusterAdv") && sensor.TryGetComp<CompPowerTrader>().PowerOn).Any())
+                if (SensorsEnemy.Where(sensor => sensor.def == ResourceBank.ThingDefOf.Ship_SensorClusterAdv && sensor.TryGetComp<CompPowerTrader>().PowerOn).Any())
                     detectionLevel -= 2;
                 else if (SensorsEnemy.Any())
                     detectionLevel -= 1;
@@ -1386,7 +1385,7 @@ namespace RimWorld
                 adj = Rand.Range(-0.075f, -0.125f);
             else
                 adj = Rand.Range(0.025f, 0.075f);
-            ShipGraveyard = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), this.map.Size, DefDatabase<WorldObjectDef>.GetNamed("ShipEnemy"));
+            ShipGraveyard = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), this.map.Size, ResourceBank.WorldObjectDefOf.WreckSpace);
             ShipGraveyard.fogGrid.ClearAllFog();
             ((WorldObjectOrbitingShip)ShipGraveyard.Parent).radius = 150;
             ((WorldObjectOrbitingShip)ShipGraveyard.Parent).theta = ((WorldObjectOrbitingShip)ShipCombatOriginMap.Parent).theta + adj;
@@ -1712,7 +1711,7 @@ namespace RimWorld
                 }
                 if (toReplace.Any()) //any shipPart, make a floating wreck
                 {
-                    DetachedShipPart part = (DetachedShipPart)ThingMaker.MakeThing(ThingDef.Named("DetachedShipPart"));
+                    DetachedShipPart part = (DetachedShipPart)ThingMaker.MakeThing(ResourceBank.ThingDefOf.DetachedShipPart);
                     part.Position = new IntVec3(minX, 0, minZ);
                     part.xSize = maxX - minX + 1;
                     part.zSize = maxZ - minZ + 1;

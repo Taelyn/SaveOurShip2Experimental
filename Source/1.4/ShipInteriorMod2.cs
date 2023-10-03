@@ -97,7 +97,7 @@ namespace SaveOurShip2
 		{
 			base.GetSettings<ModSettings_SoS>();
         }
-        public static readonly string SOS2EXPversion = "V91f10";
+        public static readonly string SOS2EXPversion = "V92";
         public static readonly int SOS2ReqCurrentMinor = 4;
         public static readonly int SOS2ReqCurrentBuild = 3704;
 
@@ -176,9 +176,9 @@ namespace SaveOurShip2
 
 			wreckDictionary = new Dictionary<ThingDef, ThingDef>
 			{
-				{ThingDef.Named("ShipHullTile"), ThingDef.Named("ShipHullTileWrecked")},
-				{ThingDef.Named("ShipHullTileMech"), ThingDef.Named("ShipHullTileWrecked")},
-				{ThingDef.Named("ShipHullTileArchotech"), ThingDef.Named("ShipHullTileWrecked")},
+				{ThingDef.Named("ShipHullTile"), ResourceBank.ThingDefOf.ShipHullTileWrecked},
+				{ThingDef.Named("ShipHullTileMech"), ResourceBank.ThingDefOf.ShipHullTileWrecked},
+				{ThingDef.Named("ShipHullTileArchotech"), ResourceBank.ThingDefOf.ShipHullTileWrecked},
 				{ThingDef.Named("Ship_Beam"), ThingDef.Named("Ship_Beam_Wrecked")},
 				{ThingDef.Named("Ship_BeamMech"), ThingDef.Named("Ship_Beam_Wrecked")},
 				{ThingDef.Named("Ship_BeamArchotech"), ThingDef.Named("Ship_Beam_Wrecked")},
@@ -372,7 +372,7 @@ namespace SaveOurShip2
 		}
 		public static int FindWorldTile()
 		{
-			for (int i = 0; i < 420; i++)//Find.World.grid.TilesCount
+			for (int i = 0; i < Find.World.grid.TilesCount; i++)
 			{
 				if (!Find.World.worldObjects.AnyWorldObjectAt(i) && TileFinder.IsValidTileForNewSettlement(i))
 				{
@@ -382,17 +382,37 @@ namespace SaveOurShip2
 			}
 			return -1;
 		}
-		public static Map GeneratePlayerShipMap(IntVec3 size)
+        public static int FindWorldTilePlayer() //slower, will find tile nearest to ship object pos
+        {
+            float bestAbsLatitude = float.MaxValue;
+            int bestTile = -1;
+            for (int i = 0; i < Find.World.grid.TilesCount; i+=10)
+            {
+                if (Find.World.worldObjects.AnyWorldObjectAt(i) || !TileFinder.IsValidTileForNewSettlement(i))
+                    continue;
+                float absLatitude = Math.Abs(Find.WorldGrid.LongLatOf(i).y);
+                if (absLatitude < bestAbsLatitude)
+                {
+                    bestAbsLatitude = absLatitude;
+                    bestTile = i;
+                }
+            }
+			if (bestTile == -1) //fallback
+			{
+				bestTile = FindWorldTile();
+            }
+            return bestTile;
+        }
+        public static Map GeneratePlayerShipMap(IntVec3 size)
 		{
-			WorldObjectOrbitingShip orbiter = (WorldObjectOrbitingShip)WorldObjectMaker.MakeWorldObject(DefDatabase<WorldObjectDef>.GetNamed("ShipOrbiting"));
+			WorldObjectOrbitingShip orbiter = (WorldObjectOrbitingShip)WorldObjectMaker.MakeWorldObject(ResourceBank.WorldObjectDefOf.ShipOrbiting);
 			orbiter.radius = 150;
 			orbiter.theta = -3;
 			orbiter.SetFaction(Faction.OfPlayer);
-			orbiter.Tile = FindWorldTile();
+			orbiter.Tile = FindWorldTilePlayer();
 			Find.WorldObjects.Add(orbiter);
-            //Map map = MapGenerator.GenerateMap(size, orbiter, orbiter.MapGeneratorDef);
-            Map map = MapGenerator.GenerateMap(new IntVec3(400, 1, 400), orbiter, orbiter.MapGeneratorDef);
-            map.fogGrid.ClearAllFog();
+			Map map = MapGenerator.GenerateMap(size, orbiter, orbiter.MapGeneratorDef);
+			map.fogGrid.ClearAllFog();
 			return map;
 		}
 		public static void GenerateImpactSite()
@@ -839,9 +859,9 @@ namespace SaveOurShip2
 							}
 							else if (!unlockedJT && def.HasComp(typeof(CompEngineTrail))) //replace JT drives if not unlocked via story
 							{
-								if (def.defName.Equals("Ship_Engine_Interplanetary"))
+								if (def == ResourceBank.ThingDefOf.Ship_Engine_Interplanetary)
 									def = DefDatabase<ThingDef>.GetNamed("Ship_Engine");
-								else if (def.defName.Equals("Ship_Engine_Interplanetary_Large"))
+								else if (def == ResourceBank.ThingDefOf.Ship_Engine_Interplanetary_Large)
 									def = DefDatabase<ThingDef>.GetNamed("Ship_Engine_Large");
 							}
 							else if (isMechs && def.building.IsTurret) //replace turets with mech version if ROY active
@@ -1260,7 +1280,7 @@ namespace SaveOurShip2
 				if ((wreckLevel == 2 && Rand.Chance(0.6f)) || (wreckLevel == 3 && Rand.Chance(0.3f) && invaderFac != null))
 				{
 					IncidentParms parms = new IncidentParms();
-					var check = (MapParent)Find.WorldObjects.AllWorldObjects.Where(ob => ob.def.defName.Equals("ShipOrbiting")).FirstOrDefault();
+					var check = (MapParent)Find.WorldObjects.AllWorldObjects.Where(ob => ob.def == ResourceBank.WorldObjectDefOf.ShipOrbiting).FirstOrDefault();
 					if (check != null)
 					{
 						parms.target = check.Map;
@@ -1856,6 +1876,7 @@ namespace SaveOurShip2
 				if (!targetMapIsSpace)
 					targetMap.snowGrid.SetDepth(adjustedPos, 0f);
 				//add all things from area
+				List<Pawn> pawns = new List<Pawn>();
 				foreach (Thing t in pos.GetThingList(sourceMap))
 				{
 					if (t is Building b)
@@ -1879,12 +1900,8 @@ namespace SaveOurShip2
                     }
 					else if (t is Pawn p)
                     {
-						if (p.IsCarrying()) //drop and add carried things
-						{
-							p.carryTracker.TryDropCarriedThing(p.Position, ThingPlaceMode.Direct, out Thing carriedt);
-                            toSave.Add(carriedt);
-                        }
-						if (!sourceMapIsSpace && p.Faction != Faction.OfPlayer && !p.IsPrisoner)
+                        pawns.Add(p);
+                        if (!sourceMapIsSpace && p.Faction != Faction.OfPlayer && !p.IsPrisoner)
                         {
                             //do not allow kidnapping other fac pawns/animals
                             Messages.Message(TranslatorFormattedStringExtensions.Translate("ShipLaunchFailPawns"), null, MessageTypeDefOf.NegativeEvent);
@@ -1898,6 +1915,15 @@ namespace SaveOurShip2
                         }*/
                     }
                     toSave.Add(t);
+                }
+                foreach (Pawn p in pawns) //drop carried things, add to move list
+                {
+					if (p.IsCarrying())
+                    {
+                        p.carryTracker.TryDropCarriedThing(p.Position, ThingPlaceMode.Direct, out Thing carriedt);
+                        toSave.Add(carriedt);
+                    }
+					//p.CurJob.Clear();
                 }
 
 				if (sourceMap.zoneManager.ZoneAt(pos) != null && !zonesToCopy.Contains(sourceMap.zoneManager.ZoneAt(pos)))
@@ -2010,10 +2036,10 @@ namespace SaveOurShip2
 				}
 				if (sourceMapIsSpace)
                 {
-                    if (targetMap.IsSpace()) //to ground 10%
-                        fuelNeeded *= 0.1f;
-                    else //same map 1%
+                    if (targetMap.IsSpace()) //space map 1%
                         fuelNeeded *= 0.01f;
+                    else //to ground 10%
+                        fuelNeeded *= 0.1f;
                 }
 				foreach (CompRefuelable engine in refuelComps)
 				{
@@ -2144,10 +2170,10 @@ namespace SaveOurShip2
 					}
 				}
 				targetMap.zoneManager.RebuildZoneGrid();
-                sourceMap.zoneManager.RebuildZoneGrid();
+				sourceMap.zoneManager.RebuildZoneGrid();
 
-                //regen affected map layers
-                List<Section> sourceSec = new List<Section>();
+				//regen affected map layers
+				List<Section> sourceSec = new List<Section>();
 				foreach (IntVec3 pos in sourceArea)
 				{
 					var sec = sourceMap.mapDrawer.SectionAt(pos);
@@ -2472,7 +2498,7 @@ namespace SaveOurShip2
 						map.zoneManager.DeregisterZone(zone);
 				}
 				map.zoneManager.RebuildZoneGrid();
-                foreach (IntVec3 pos in map)
+				foreach (IntVec3 pos in map)
 				{
 					var sec = map.mapDrawer.SectionAt(pos);
 					if (!sourceSec.Contains(sec))
