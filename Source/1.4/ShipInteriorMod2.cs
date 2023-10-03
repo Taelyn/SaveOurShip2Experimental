@@ -411,8 +411,9 @@ namespace SaveOurShip2
 			orbiter.SetFaction(Faction.OfPlayer);
 			orbiter.Tile = FindWorldTilePlayer();
 			Find.WorldObjects.Add(orbiter);
-			Map map = MapGenerator.GenerateMap(size, orbiter, orbiter.MapGeneratorDef);
-			map.fogGrid.ClearAllFog();
+            //Map map = MapGenerator.GenerateMap(size, orbiter, orbiter.MapGeneratorDef);
+            Map map = MapGenerator.GenerateMap(new IntVec3(400, 1, 400), orbiter, orbiter.MapGeneratorDef);
+            map.fogGrid.ClearAllFog();
 			return map;
 		}
 		public static void GenerateImpactSite()
