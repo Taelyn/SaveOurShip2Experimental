@@ -789,7 +789,8 @@ namespace RimWorld
                 mapSize = new IntVec3(mapX, 1, ModSettings_SoS.enemyMapSize);
             }
 
-            newMap = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), mapSize, ResourceBank.WorldObjectDefOf.ShipEnemy);
+            // newMap = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), mapSize, ResourceBank.WorldObjectDefOf.ShipEnemy);
+            newMap = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), new IntVec3(400, 1, 400), ResourceBank.WorldObjectDefOf.ShipEnemy);
 
             var mp = (WorldObjectOrbitingShip)newMap.Parent;
             mp.radius = radius;
@@ -1493,7 +1494,8 @@ namespace RimWorld
                 adj = Rand.Range(0.025f, 0.075f);
             else
                 adj = Rand.Range(-0.075f, -0.125f);
-            ShipGraveyard = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), map.Size, ResourceBank.WorldObjectDefOf.WreckSpace);
+            // ShipGraveyard = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), map.Size, ResourceBank.WorldObjectDefOf.WreckSpace);
+            ShipGraveyard = GetOrGenerateMapUtility.GetOrGenerateMap(ShipInteriorMod2.FindWorldTile(), new IntVec3(400, 1, 400), ResourceBank.WorldObjectDefOf.WreckSpace);
             ShipGraveyard.fogGrid.ClearAllFog();
             var mp = (WorldObjectOrbitingShip)ShipGraveyard.Parent;
             mp.radius = 150;
