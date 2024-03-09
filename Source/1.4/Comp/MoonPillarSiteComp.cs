@@ -38,10 +38,10 @@ namespace RimWorld.Planet
                     }
                 }
                 bool flag3 = false;
-                Map mapPlayer = ((MapParent)Find.WorldObjects.AllWorldObjects.Where(ob => ob.def == ResourceBank.WorldObjectDefOf.ShipOrbiting).FirstOrDefault())?.Map; 
+                Map mapPlayer = ShipInteriorMod2.FindPlayerShipMap(); 
                 if (mapPlayer != null)
                 {
-                    foreach (Building_ShipAdvSensor sensor in Find.World.GetComponent<PastWorldUWO2>().Sensors)
+                    foreach (Building_ShipAdvSensor sensor in ShipInteriorMod2.WorldComp.Sensors)
                     {
                         if (sensor.observedMap == this.parent)
                         {
@@ -52,10 +52,10 @@ namespace RimWorld.Planet
                 if (flag2 && !flag && !flag3)
                 {
                     Find.WorldObjects.Remove(this.parent);
-                    if (!WorldSwitchUtility.PastWorldTracker.Unlocks.Contains("ArchotechPillarB"))
+                    if (!ShipInteriorMod2.WorldComp.Unlocks.Contains("ArchotechPillarB"))
                     {
                         Find.LetterStack.ReceiveLetter(TranslatorFormattedStringExtensions.Translate("MoonPillarLostLabel"), TranslatorFormattedStringExtensions.Translate("MoonPillarLost"), LetterDefOf.NegativeEvent, null);
-                        ShipInteriorMod2.GenerateArchotechPillarBSite();
+                        ShipInteriorMod2.GenerateSite("MoonPillarSite");
                     }
                 }
             }

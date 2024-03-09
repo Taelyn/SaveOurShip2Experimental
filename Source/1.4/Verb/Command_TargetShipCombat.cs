@@ -9,7 +9,7 @@ using Verse.Sound;
 
 namespace RimWorld
 {
-    public class Command_VerbTargetShip : Command
+    public class Command_TargetShipCombat : Command
     {
         public Verb verb;
 
@@ -47,7 +47,7 @@ namespace RimWorld
         public override void MergeWith(Gizmo other)
         {
             base.MergeWith(other);
-            Command_VerbTargetShip command_VerbTargetShip = other as Command_VerbTargetShip;
+            Command_TargetShipCombat command_VerbTargetShip = other as Command_TargetShipCombat;
             if (command_VerbTargetShip == null)
             {
                 Log.ErrorOnce("Tried to merge Command_VerbTarget with unexpected type", 73406263);
@@ -74,7 +74,7 @@ namespace RimWorld
                 Messages.Message(TranslatorFormattedStringExtensions.Translate("MessageTurretWontFireBecauseNotInShipCombat"), null, MessageTypeDefOf.RejectInput, historical: false);
                 return;
             }
-            CameraJumper.TryJump(mapComp.ShipCombatMasterMap.Center, mapComp.ShipCombatMasterMap);
+            CameraJumper.TryJump(mapComp.ShipCombatTargetMap.Center, mapComp.ShipCombatTargetMap);
             Targeter targeter = Find.Targeter;
             TargetingParameters parms = new TargetingParameters();
             parms.canTargetPawns = true;

@@ -34,7 +34,9 @@ namespace RimWorld
 		{
 			base.ExposeData();
 			Scribe_Defs.Look<EnemyShipDef>(ref enemyShipDef, "enemyShipDef");
-		}
+            Scribe_Values.Look<bool>(ref damageStart, "damageStart");
+            Scribe_Values.Look<ShipStartFlags>(ref startType, "startType");
+        }
 		public override void DoEditInterface(Listing_ScenEdit listing)
 		{
             Rect scenPartRect = listing.GetScenPartRect(this, ScenPart.RowHeight * 3f);
@@ -44,18 +46,20 @@ namespace RimWorld
 			//selection 1
 			if (Widgets.ButtonText(rect1, "Start on: " + startType.ToString(), true, true, true))
 			{
-				List<FloatMenuOption> toggleType = new List<FloatMenuOption>();
-				toggleType.Add(new FloatMenuOption("Start on: ship", delegate ()
-				{
-					startType = ShipStartFlags.Ship;
-					enemyShipDef = DefDatabase<EnemyShipDef>.GetNamed("0");
-				}, MenuOptionPriority.Default, null, null, 0f, null, null, true, 0));
-				toggleType.Add(new FloatMenuOption("Start on: station", delegate ()
-				{
-					startType = ShipStartFlags.Station;
-					enemyShipDef = DefDatabase<EnemyShipDef>.GetNamed("0");
-				}, MenuOptionPriority.Default, null, null, 0f, null, null, true, 0));
-				Find.WindowStack.Add(new FloatMenu(toggleType));
+                List<FloatMenuOption> toggleType = new List<FloatMenuOption>
+                {
+                    new FloatMenuOption("Start on: ship", delegate ()
+					{
+						startType = ShipStartFlags.Ship;
+						enemyShipDef = DefDatabase<EnemyShipDef>.GetNamed("0");
+					}, MenuOptionPriority.Default, null, null, 0f, null, null, true, 0),
+                    new FloatMenuOption("Start on: station", delegate ()
+                    {
+                        startType = ShipStartFlags.Station;
+                        enemyShipDef = DefDatabase<EnemyShipDef>.GetNamed("0");
+                    }, MenuOptionPriority.Default, null, null, 0f, null, null, true, 0)
+                };
+                Find.WindowStack.Add(new FloatMenu(toggleType));
 
 			}
 			//selection 2
@@ -113,13 +117,16 @@ namespace RimWorld
 
 		public void DoEarlyInit() //Scenario.GetFirstConfigPage call via patch 
         {
-			WorldSwitchUtility.StartShipFlag = true;
+			ShipInteriorMod2.StartShipFlag = true;
 		}
 
 		public static Map GenerateShipSpaceMap() //MapGenerator.GenerateMap override via patch
 		{
 			int newTile = ShipInteriorMod2.FindWorldTilePlayer();
-			Map spaceMap = GetOrGenerateMapUtility.GetOrGenerateMap(newTile, ResourceBank.WorldObjectDefOf.ShipOrbiting);
+			IntVec3 size = Find.World.info.initialMapSize;
+			if (size.x < 250 || size.z < 250)
+				size = new IntVec3(250, 0, 250);
+            Map spaceMap = GetOrGenerateMapUtility.GetOrGenerateMap(newTile, size, ResourceBank.WorldObjectDefOf.ShipOrbiting);
 			((WorldObjectOrbitingShip)spaceMap.Parent).radius = 150;
 			((WorldObjectOrbitingShip)spaceMap.Parent).theta = 2.75f;
 			Current.ProgramState = ProgramState.MapInitializing;
@@ -153,17 +160,6 @@ namespace RimWorld
 				}
 			}
 
-			if (scen.startType == ShipStartFlags.Ship) //defog and homezone ships
-			{
-				spaceMap.fogGrid.ClearAllFog();
-				foreach (Building b in spaceMap.listerThings.AllThings.Where(t => t is Building))
-				{
-					foreach (IntVec3 v in b.OccupiedRect())
-					{
-						spaceMap.areaManager.Home[v] = true;
-					}
-				}
-			}
 			CameraJumper.TryJump(spaceMap.Center, spaceMap);
 			spaceMap.weatherManager.curWeather = ResourceBank.WeatherDefOf.OuterSpaceWeather;
 			spaceMap.weatherManager.lastWeather = ResourceBank.WeatherDefOf.OuterSpaceWeather;
@@ -172,7 +168,25 @@ namespace RimWorld
 			spaceMap.regionAndRoomUpdater.RebuildAllRegionsAndRooms();
 			foreach (Room r in spaceMap.regionGrid.allRooms)
 				r.Temperature = 21;
-			AccessExtensions.Utility.RecacheSpaceMaps();
+            try //do post game start?
+            {
+                if (scen.startType == ShipStartFlags.Ship) //defog and homezone ships
+                {
+                    spaceMap.fogGrid.ClearAllFog();
+                    foreach (Building b in spaceMap.listerThings.AllThings.Where(t => t is Building))
+                    {
+                        foreach (IntVec3 v in b.OccupiedRect())
+                        {
+                            spaceMap.areaManager.Home[v] = true;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Warning(e.Message + "\n" + e.StackTrace);
+            }
+            AccessExtensions.Utility.RecacheSpaceMaps();
 			return spaceMap;
 		}
 		public override void PostGameStart() //spawn pawns, things
@@ -207,15 +221,15 @@ namespace RimWorld
 					}
 				}
 			}
-			List<Building> spawns = new List<Building>();
-			List<IntVec3> spawnPos = GetSpawnCells(spaceMap, out spawns);
+			List<Building> spawners = new List<Building>();
+			List<IntVec3> spawnPos = GetSpawnCells(spaceMap, out spawners);
 			foreach (List<Thing> thingies in list)
 			{
 				IntVec3 nextPos = spaceMap.Center;
 				nextPos = spawnPos.RandomElement();
 				spawnPos.Remove(nextPos);
 				if (spawnPos.Count == 0)
-					spawnPos = GetSpawnCells(spaceMap, out spawns); //reuse spawns
+					spawnPos = GetSpawnCells(spaceMap, out spawners); //reuse spawns
 
 				foreach (Thing thingy in thingies)
 				{
@@ -225,30 +239,30 @@ namespace RimWorld
 				if (scen.startType == ShipStartFlags.Station)
 					FloodFillerFog.FloodUnfog(nextPos, spaceMap);
 			}
-			foreach (Building b in spawns.Where(b => !b.Destroyed)) //remove spawn points
+			foreach (Building b in spawners.Where(b => !b.Destroyed)) //remove spawn points
 			{
 				b.Destroy();
 			}
-			spawns.Clear();
+			spawners.Clear();
 			spawnPos.Clear();
 		}
-		static List<IntVec3> GetSpawnCells(Map spaceMap, out List<Building> spawns) //spawn placer > crypto > salvbay > bridge
+		static List<IntVec3> GetSpawnCells(Map spaceMap, out List<Building> spawners) //spawn placer > crypto > salvbay > bridge
 		{
-			spawns = new List<Building>();
+			spawners = new List<Building>();
 			List<IntVec3> spawncells = new List<IntVec3>();
-			foreach (Building b in spaceMap.listerBuildings.allBuildingsColonist.Where(b => b.def.defName.Equals("PawnSpawnerStart")))
+			foreach (Building b in spaceMap.listerThings.AllThings.Where(b => b is Building && b.def.defName.Equals("PawnSpawnerStart")))
 			{
 				spawncells.Add(b.Position);
-				spawns.Add(b);
+				spawners.Add(b);
 			}
 			if (spawncells.Any())
-			{
-				return spawncells;
+            {
+                return spawncells;
 			}
 			//backups
 			List<IntVec3> salvBayCells = new List<IntVec3>();
 			List<IntVec3> bridgeCells = new List<IntVec3>();
-			foreach (Building b in spaceMap.listerBuildings.allBuildingsColonist)
+			foreach (Building b in spaceMap.listerThings.AllThings.Where(b => b is Building))
 			{
 				if (b is Building_CryptosleepCasket c && !c.HasAnyContents)
 				{

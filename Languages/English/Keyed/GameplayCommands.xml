@@ -56,8 +56,9 @@
 	<ShipInsideToggleEngines>Engage ship engines</ShipInsideToggleEngines>
 	<ShipInsideToggleEnginesDesc>Engage ship engines to clear hazards.</ShipInsideToggleEnginesDesc>
 	<ShipMoveDesc>Deselect to confirm location</ShipMoveDesc>
-	<ShipCombatEscape>Escape combat</ShipCombatEscape>
-	<ShipCombatEscapeDesc>Flee from battle, leaving behind anyone aboard the enemy ship</ShipCombatEscapeDesc>
+	<ShipRebuild>Rebuild ship parts</ShipRebuild>
+	<ShipRebuildDesc>Places blueprints for destroyed buildings on this ship.</ShipRebuildDesc>
+	<!-- combat -->
 	<ShipCombatRetreat>Retreat</ShipCombatRetreat>
 	<ShipCombatRetreatDesc>Try to move away from the enemy ship</ShipCombatRetreatDesc>
 	<ShipCombatStop>Stop</ShipCombatStop>
@@ -66,20 +67,29 @@
 	<ShipCombatMaintainDesc>Maintain distance to the enemy ship</ShipCombatMaintainDesc>
 	<ShipCombatAdvance>Advance</ShipCombatAdvance>
 	<ShipCombatAdvanceDesc>Try to move closer to the enemy ship</ShipCombatAdvanceDesc>
+	<ShipCombatEscape>Escape combat</ShipCombatEscape>
+	<ShipCombatEscapeDesc>Flee from battle, leaving behind anyone aboard the enemy ship</ShipCombatEscapeDesc>
+	<ShipTargetEnd>Stop targeting</ShipTargetEnd>
+	<ShipTargetEndDesc>Stop targeting your current target with your weapons.</ShipTargetEndDesc>
+	<CommandWithdrawShip>Withdraw ship</CommandWithdrawShip>
+	<CommandWithdrawShipDesc>Withdraw this ship from the battle</CommandWithdrawShipDesc>
+	<CommandWithdrawShipLast>Last ship can not withdraw</CommandWithdrawShipLast>
+	<ConfirmWithdrawShipCombat>Withdraw this ship to the graveyard? If you lose or flee, the enemy ship will attack your graveyard.</ConfirmWithdrawShipCombat>
+	<CommandWithdrawWrecks>Withdraw wrecks</CommandWithdrawWrecks>
+	<CommandWithdrawWrecksDesc>Withdraw all wrecks from the battle</CommandWithdrawWrecksDesc>
+	<CommandWithdrawMoveWrecks>Can not move with wrecks on map!</CommandWithdrawMoveWrecks>
+	<ConfirmWithdrawWrecksCombat>Withdraw all wrecks to the graveyard? If you lose or flee, the enemy ship will attack your graveyard. If you win, the wrecks can be retrieved with the salvage bay for a minor amount of fuel.</ConfirmWithdrawWrecksCombat>
 	<CommandScuttleShip>Launch all escape pods</CommandScuttleShip>
 	<CommandScuttleShipDesc>Launches all escape pods to selected destination on the planet.</CommandScuttleShipDesc>
 	<CommandScuttleShipPods>Can not abandon ship with pods in transit to/from it!</CommandScuttleShipPods>
 	<ShipInsideNoLoadedPods>No loaded crypto pods</ShipInsideNoLoadedPods>
 	<CommandLaunchCryptoNotLoaded>Crypto pod not loaded</CommandLaunchCryptoNotLoaded>
-	<CommandWithdrawShip>Withdraw Ship</CommandWithdrawShip>
-	<CommandWithdrawShipDesc>Withdraw this ship from the battle</CommandWithdrawShipDesc>
-	<CommandWithdrawShipLast>Last ship can not withdraw</CommandWithdrawShipLast>
 	<ShipInsideSelectWeapons>Select</ShipInsideSelectWeapons>
 	<ShipInsideSelectWeaponsDesc>Select connected ship-to-ship weapons</ShipInsideSelectWeaponsDesc>
 	<ShipInsideHoldFire>Cease fire</ShipInsideHoldFire>
 	<ShipInsideHoldFireDesc>Stop all connected ship-to-ship weapons from firing on enemy ship</ShipInsideHoldFireDesc>
 	<NotAtMaxShipRange>Not at maximum range</NotAtMaxShipRange>
-	<ShipOnEnemyMap>Ship is on enemy map</ShipOnEnemyMap>
+	<ShipOnEnemyMap>Ship is in unstable orbit.</ShipOnEnemyMap>
 	<!-- airlock -->
 	<ShipInsideToggleDock>Toggle extender</ShipInsideToggleDock>
 	<ShipInsideToggleDockDesc>Extend or retract the airlock extender up to 3 tiles away</ShipInsideToggleDockDesc>
@@ -88,7 +98,7 @@
 	<ShipInsideReturnShipDesc>Move this ship back to your stable orbit</ShipInsideReturnShipDesc>
 	<ShipInsideCaptureShip>Capture</ShipInsideCaptureShip>
 	<ShipInsideCaptureShipDesc>Move this ship to your map</ShipInsideCaptureShipDesc>
-	<ShipLaunchFailPawns>Non player pawns found on ship, takeoff aborted.</ShipLaunchFailPawns>
+	<ShipLaunchFailPawns>Non player pawn found on ship: {0}, takeoff aborted.</ShipLaunchFailPawns>
 	<ShipMoveFailPawns>Player pawn in {0}, ship move aborted.</ShipMoveFailPawns>
 	<ShipMoveWreckCommand>Move wreck</ShipMoveWreckCommand>
 	<ShipMoveWreckCommandDesc>Reposition a wreck on your map</ShipMoveWreckCommandDesc>
@@ -96,12 +106,19 @@
 	<ShipMoveWreckFlipCommandDesc>Reposition and flip a wreck on your map</ShipMoveWreckFlipCommandDesc>
 	<ShipMoveWreckRotCommand>Rotate wreck</ShipMoveWreckRotCommand>
 	<ShipMoveWreckRotCommandDesc>Reposition and rotate a wreck counter clockwise on your map</ShipMoveWreckRotCommandDesc>
-	<ShipSalvageCommand>Retrieve wreck</ShipSalvageCommand>
-	<ShipSalvageCommandDesc>Retrieve a wreck from target ship</ShipSalvageCommandDesc>
+	<ShipSalvageCommand>Retrieve from {0}</ShipSalvageCommand>
+	<ShipSalvageCommandDesc>Retrieve a wreck from target map {0}</ShipSalvageCommandDesc>
+	<ShipSalvageBeam>Retrieve debris from {0}</ShipSalvageBeam>
+	<ShipSalvageBeamDesc>Retrieve loose, free-floating debris from target map {0}</ShipSalvageBeamDesc>
+	<ShipSalvageStablize>Stabilize {0}</ShipSalvageStablize>
+	<ShipSalvageStablizeFuel>Stabilization requires {0} fuel!</ShipSalvageStablizeFuel>
+	<ShipSalvageStablizeDesc>Stabilize the orbit of {0}. This requires enough salvage bays and will consume fuel in your engines.</ShipSalvageStablizeDesc>
+	<ShipSalvageStablizeConfirm>Stabilize the orbit of {0}. This requires enough salvage bays and will consume {1} chemfuel equivalent in your engines.</ShipSalvageStablizeConfirm>
 	<ShipSalvageDisabled>In ship battle or enemy pawns present!</ShipSalvageDisabled>
-	<ShipSalvageAbandonConfirm>Are you sure you want to discard the target?\nEverything connected to it will burn up in the atmosphere!</ShipSalvageAbandonConfirm>
+	<ShipSalvageAbandonConfirm>Are you sure you want to discard the target?\nEverything connected to or on it will burn up in the atmosphere!</ShipSalvageAbandonConfirm>
 	<ShipSalvageBridge>Can not move intact ships with the salvage bay, capture or destroy the bridge.</ShipSalvageBridge>
 	<ShipSalvageCount>Not enough salvage bays. {0}/{1}</ShipSalvageCount>
+	<ShipSalvageNoSpace>Not enough space on salvage bay.</ShipSalvageNoSpace>
 	<ShipClaimWrecksCommand>Claim wrecks</ShipClaimWrecksCommand>
 	<ShipClaimWrecksCommandDesc>Claim all wrecks on this map</ShipClaimWrecksCommandDesc>
 	<ShipClaimWrecksSuccess>Claimed {0} buildings!</ShipClaimWrecksSuccess>
@@ -151,12 +168,12 @@
 	<!-- blueprints -->
 	<ShipBlueprintDisabled>Requires starflight basics research</ShipBlueprintDisabled>
 	<ShipBlueprintFailed>Blueprint placement failed! Area must support heavy construction and be clear of non-owned objects and mountain roof.</ShipBlueprintFailed>
-	<ShipBlueprintPlace1>Plating blueprints</ShipBlueprintPlace1>
-	<ShipBlueprintPlace1Desc>Place ship plating blueprints. Construct this before placing hull blueprints.</ShipBlueprintPlace1Desc>
-	<ShipBlueprintPlace2>Hull blueprints</ShipBlueprintPlace2>
-	<ShipBlueprintPlace2Desc>Place ship hull blueprints. Construct this before placing interior blueprints.</ShipBlueprintPlace2Desc>
-	<ShipBlueprintPlace3>Place interior blueprints</ShipBlueprintPlace3>
-	<ShipBlueprintPlace3Desc>Place ship interior blueprints.</ShipBlueprintPlace3Desc>
+	<ShipBlueprintPlace1>Ship frame blueprints</ShipBlueprintPlace1>
+	<ShipBlueprintPlace1Desc>Place ship plating and outer hull blueprints. Construct this before placing ship hull!</ShipBlueprintPlace1Desc>
+	<ShipBlueprintPlace2>Ship hull blueprints</ShipBlueprintPlace2>
+	<ShipBlueprintPlace2Desc>Place ship hull blueprints. Construct this before placing interior blueprints!</ShipBlueprintPlace2Desc>
+	<ShipBlueprintPlace3>Ship interior blueprints</ShipBlueprintPlace3>
+	<ShipBlueprintPlace3Desc>Place ship interior blueprints. Construct frame and hull blueprints before placing these!</ShipBlueprintPlace3Desc>
 	<!-- holo/spore -->
 	<SoSSpawnHologram>Spawn formgel</SoSSpawnHologram>
 	<SoSSpawnHologramDesc>Assemble a formgel through which this consciousness can affect the world</SoSSpawnHologramDesc>
@@ -199,6 +216,8 @@
 	<ArchotechCommandInsanityDesc>Inflict psychic insanity on one pawn (costs {0} field strength)</ArchotechCommandInsanityDesc>
 	<ArchotechCommandPsylink>Psylink</ArchotechCommandPsylink>
 	<ArchotechCommandPsylinkDesc>Grant a level of psylink to one pawn (costs {0} field strength)</ArchotechCommandPsylinkDesc>
+	<ArchoAnimalSuddenDeath>By some cosmic event an archo animal appeared for a brief moment only to vanish soon after. Maybe it is a sign of things to come.</ArchoAnimalSuddenDeath>
+	<ArchoAnimalSporeDeath>Without an Archotech to guide it, {0} has perished.</ArchoAnimalSporeDeath>
 	<CraftArchocat>Spawn archocat</CraftArchocat>
 	<CraftArchomutt>Spawn archomutt</CraftArchomutt>
 	<CraftArchostrich>Spawn archostrich</CraftArchostrich>
@@ -211,6 +230,8 @@
 	<CraftArchothrumbo>Spawn archothrumbo</CraftArchothrumbo>
 	<ArchotechOptimizeMatter>Optimize matter</ArchotechOptimizeMatter>
 	<ArchotechOptimizeMatterDesc>Automatically convert standard hull to archotech hull in a slowly widening radius. This will not affect large structures such as heatsinks or shield generators.</ArchotechOptimizeMatterDesc>
+	<ArchotechSporeGiftParticles>Auto gift particles</ArchotechSporeGiftParticles>
+	<ArchotechSporeGiftParticlesDesc>Automatically accept and convert spore rewards to exotic particles</ArchotechSporeGiftParticlesDesc>
 	<ArchotechDemandGift>Demand gift</ArchotechDemandGift>
 	<ArchotechDemandGiftDesc>Demand an immediate gift from your archotech spore. This will result in a stacking -40 mood penalty!</ArchotechDemandGiftDesc>
 	<ArchotechNoGiftsUnlocked>No gifts unlocked by research</ArchotechNoGiftsUnlocked>
@@ -239,7 +260,7 @@
 	<ShipWallLightDiscoDesc>Set this light to cycle through the color spectrum</ShipWallLightDiscoDesc>
 	<ShipWallLightAdjacency>No adjacent rooms</ShipWallLightAdjacency>
 	<ShipHeatPurge>Vent coolant</ShipHeatPurge>
-	<ShipHeatPurgeDesc>Begin venting heat from heatsinks. All shields, weapons, and cloaks on this heat network will shut down, and heatsinks will vent heat five times as quickly.\n\nThis process depletes coolant and reduces the overall capacity of the heat network, and cannot be canceled once it has begun. Outside of combat, depleted capacity will slowly recover.</ShipHeatPurgeDesc>
+	<ShipHeatPurgeDesc>Begin venting coolant from heatsinks. All shields, weapons, and cloaks on this heat network will shut down, and heatsinks will vent heat five times as quickly.\n\nThis process depletes coolant and reduces the overall capacity of the heat network, and cannot be canceled once it has begun. Outside of combat, depleted capacity will slowly recover.</ShipHeatPurgeDesc>
 	<ShipHeatPurgeVenting>Already venting</ShipHeatPurgeVenting>
 	<ShipHeatPurgeNotEnough>Not enough heat in network for purge</ShipHeatPurgeNotEnough>
 </LanguageData>

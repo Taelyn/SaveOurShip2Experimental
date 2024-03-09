@@ -31,7 +31,7 @@ namespace RimWorld
             base.Tick();
             if (Find.TickManager.TicksGame % 60 == 0)
             {
-                if (heatComp.myNet == null || mapComp.InCombat || heatComp.myNet.venting)
+                if (heatComp.myNet == null || heatComp.myNet.StorageCapacityRaw == 0 || heatComp.myNet.venting || mapComp.InCombat)
                 {
                     flickComp.SwitchIsOn = false;
                     active = false;
@@ -43,21 +43,16 @@ namespace RimWorld
                 if (active)
                 {
                     bool turnedOff = false;
-                    foreach (ShipHeatNet net in mapComp.cachedNets)
+                    foreach (ShipHeatNet net in mapComp.cachedNets.Where(n => n != null && n.StorageCapacityRaw > 0))
                     {
-                        if (net != null && net.StorageCapacityRaw > 0)
+                        if (!heatComp.AddDepletionToNetwork(1f + net.StorageCapacityRaw / 10000f))
                         {
-                            float f = 1f + net.StorageCapacityRaw / 10000f;
-                            if (f > net.StorageCapacity) //all cloaks off
+                            foreach (Building_ShipCloakingDevice cloak in mapComp.Cloaks) //all cloaks off
                             {
-                                foreach (Building_ShipCloakingDevice cloak in mapComp.Cloaks)
-                                {
-                                    cloak.flickComp.SwitchIsOn = false;
-                                    turnedOff = true;
-                                }
+                                cloak.flickComp.SwitchIsOn = false;
                             }
-                            else
-                                net.AddDepletion(f);
+                            turnedOff = true;
+                            return;
                         }
                     }
                     if (turnedOff)

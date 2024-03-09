@@ -18,11 +18,12 @@ namespace RimWorld
         static readonly float fieldCostShock = 2f;
         static readonly float fieldCostInsanity = 5f;
         static readonly float fieldCostPsylink = 25f;
+
         readonly StatDef pillars = StatDef.Named("ArchotechPillarsConnected");
-        public float mood => Consciousness == null ? 1 : Consciousness.needs.mood.CurLevel * 2; //1 is neutral, 2 is super happy, 0 is MURDER
+        public float Mood => Consciousness == null ? 1 : Mathf.Clamp(Consciousness.needs.mood.CurLevel * 2, 0, 2); //1 is neutral, 2 is super happy, 0 is MURDER
         public float fieldStrength = 0f;
-        static int lastGiftTick = 0;
         int lastPrankTick = 0;
+        bool GiftParticles = false;
         bool unlockedPsy = false;
         bool ideoCrisis = false;
         public bool newSpore = false;
@@ -55,10 +56,10 @@ namespace RimWorld
             if (Consciousness == null)
                 return;
             Color eyeColor = Color.red;
-            if (mood < 1f)
-                eyeColor = new Color(1f, mood, 0);
+            if (Mood < 1f)
+                eyeColor = new Color(1f, Mood, 0);
             else
-                eyeColor = new Color(2f - mood, 2f-mood, mood - 1f);
+                eyeColor = new Color(2f - Mood, 2f-Mood, Mood - 1f);
             eyeColor.a = Mathf.Cos(Mathf.PI * (float)Find.TickManager.TicksGame / 256f);
             eyeGraphic.GetColoredVersion(ShaderDatabase.MetaOverlay, eyeColor, eyeColor).Draw(new Vector3(this.DrawPos.x, this.DrawPos.y + 1f, this.DrawPos.z), this.Rotation, this);
         }
@@ -71,10 +72,12 @@ namespace RimWorld
                 Find.LetterStack.ReceiveLetter(TranslatorFormattedStringExtensions.Translate("SoSSporeBuilt"), TranslatorFormattedStringExtensions.Translate("SoSSporeBuiltDesc"), LetterDefOf.PositiveEvent);
                 newSpore = true;
             }
-            if(Consciousness==null && !newSpore)
+            if (Consciousness==null && !newSpore)
             {
                 ConsciousnessComp.GenerateAIPawn();
             }
+            if (ShipInteriorMod2.WorldComp.LastSporeGiftTick == 0)
+                ShipInteriorMod2.WorldComp.LastSporeGiftTick = Find.TickManager.TicksGame;
         }
 
         public override void TickRare()
@@ -83,22 +86,21 @@ namespace RimWorld
             if (Consciousness == null)
                 return;
             int tick = Find.TickManager.TicksGame;
-            if (!WorldSwitchUtility.PastWorldTracker.startedEndgame)
+            if (!ShipInteriorMod2.WorldComp.startedEndgame)
             {
-                WorldSwitchUtility.PastWorldTracker.startedEndgame = true;
-                WorldSwitchUtility.PastWorldTracker.Unlocks.Add("ArchotechUplink");
+                ShipInteriorMod2.WorldComp.startedEndgame = true;
+                ShipInteriorMod2.WorldComp.Unlocks.Add("ArchotechUplink");
                 Find.LetterStack.ReceiveLetter(TranslatorFormattedStringExtensions.Translate("SoSFindPillars"), TranslatorFormattedStringExtensions.Translate("SoSFindPillarsDesc"), LetterDefOf.PositiveEvent);
-                //lastGiftTick = tick;
                 lastPrankTick = tick+Rand.Range(40000,80000);
             }
 
-            if(unlockedPsy || ResourceBank.ResearchProjectDefOf.ArchotechPsychicField.IsFinished)
+            if (unlockedPsy || ResourceBank.ResearchProjectDefOf.ArchotechPsychicField.IsFinished)
             {
                 unlockedPsy = true;
                 fieldStrength += 0.001f * (1+ NumConnectedPillars);
             }
 
-            if (tick-lastGiftTick > 90000 * (5- NumConnectedPillars) * (3-mood))
+            if (tick - ShipInteriorMod2.WorldComp.LastSporeGiftTick > 90000 * (5- NumConnectedPillars) * (3-Mood))
             {
                 int numUnlock = 0;
                 foreach (ArchotechGiftDef def in DefDatabase<ArchotechGiftDef>.AllDefs)
@@ -112,24 +114,18 @@ namespace RimWorld
                     numUnlock = 5;
                 if (numUnlock > 0)
                 {
-                    lastGiftTick = tick;
-                    Slate slate = new Slate();
-                    slate.Set<string>("quest_name", "A Gift From " + Consciousness.Name.ToStringFull);
-                    slate.Set<string>("archotech_name", Consciousness.Name.ToStringShort);
-                    slate.Set<Map>("map", this.Map);
-                    slate.Set<int>("value", numUnlock*1000);
-                    Quest quest = QuestUtility.GenerateQuestAndMakeAvailable(DefDatabase<QuestScriptDef>.GetNamed("ArchotechGiftQuest"), slate);
-                    Find.LetterStack.ReceiveLetter(quest.name, quest.description, LetterDefOf.PositiveEvent, null, null, quest, null, null);
+                    ShipInteriorMod2.WorldComp.LastSporeGiftTick = tick;
+                    MakeGift(numUnlock);
                 }
                 else
                 {
-                    lastGiftTick += 60000;
+                    ShipInteriorMod2.WorldComp.LastSporeGiftTick += 60000;
                 }
             }
-            if (mood < 0.8f && tick > lastPrankTick)
+            if (Mood < 0.8f && tick > lastPrankTick)
                 PlayPrank(tick);
 
-            if(!ideoCrisis && tick % 20000 == 0 && ModsConfig.IdeologyActive)
+            if (!ideoCrisis && tick % 20000 == 0 && ModsConfig.IdeologyActive)
             {
                 ideoCrisis = true;
 
@@ -347,15 +343,15 @@ namespace RimWorld
         {
             base.ExposeData();
             Scribe_Values.Look<float>(ref fieldStrength, "FieldStrength");
-            Scribe_Values.Look<int>(ref lastGiftTick, "LastGift");
             Scribe_Values.Look<bool>(ref newSpore, "NewSpore");
             Scribe_Values.Look<bool>(ref ideoCrisis, "IdeoCrisis");
+            Scribe_Values.Look<bool>(ref GiftParticles, "GiftParticles");
         }
 
         public override string GetInspectString()
         {
             string text = base.GetInspectString();
-            text += "\nMood: " + Mathf.Round(mood * 50f) + "\nPsychic field strength: "+fieldStrength;
+            text += "\nMood: " + Mathf.Round(Mood * 50f) + "\nPsychic field strength: "+fieldStrength;
             return text;
         }
 
@@ -521,16 +517,12 @@ namespace RimWorld
                             FloatMenuOption op = new FloatMenuOption(map.Parent.Label, delegate {
                                 CameraJumper.TryJump(Position, map);
                                 Find.Targeter.BeginTargeting(TargetingParameters.ForAttackAny(), delegate (LocalTargetInfo target) {
-                                    if (target.HasThing && target.Thing is Pawn)
+                                    if (target.HasThing && target.Thing is Pawn p && p.GetPsylinkLevel() < 6)
                                     {
-                                        Pawn pawn = (Pawn)target.Thing;
-                                        if (pawn.GetPsylinkLevel() < 6)
-                                        {
-                                            pawn.ChangePsylinkLevel(1);
-                                            fieldStrength -= fieldCostPsylink;
-                                            SoundDefOf.PsychicPulseGlobal.PlayOneShotOnCamera(Find.CurrentMap);
-                                            FleckMaker.Static(Position, Map, FleckDefOf.PsycastAreaEffect, 10f);
-                                        }
+                                        p.ChangePsylinkLevel(1);
+                                        fieldStrength -= fieldCostPsylink;
+                                        SoundDefOf.PsychicPulseGlobal.PlayOneShotOnCamera(Find.CurrentMap);
+                                        FleckMaker.Static(Position, Map, FleckDefOf.PsycastAreaEffect, 10f);
                                     }
                                 });
                             });
@@ -554,40 +546,53 @@ namespace RimWorld
                 giz.Add(formPsylink);
             }
 
-            bool anyGiftsUnlocked = false;
-            foreach (ArchotechGiftDef def in DefDatabase<ArchotechGiftDef>.AllDefs)
+
+            if (Consciousness != null) //gifting
             {
-                if (def.research.IsFinished)
+                bool anyGiftsUnlocked = false;
+                foreach (ArchotechGiftDef def in DefDatabase<ArchotechGiftDef>.AllDefs)
                 {
-                    anyGiftsUnlocked = true;
-                    break;
+                    if (def.research.IsFinished)
+                    {
+                        anyGiftsUnlocked = true;
+                        break;
+                    }
                 }
-            }
-            Command_Action demandGift = new Command_Action
-            {
-                action = delegate
+                if (ResourceBank.ResearchProjectDefOf.ArchotechExotics.IsFinished)
                 {
-                    Slate slate = new Slate();
-                    slate.Set<string>("quest_name", "A Gift From " + Consciousness.Name.ToStringFull);
-                    slate.Set<string>("archotech_name", Consciousness.Name.ToStringShort);
-                    slate.Set<Map>("map", this.Map);
-                    slate.Set<int>("value", 5000);
-                    Quest quest = QuestUtility.GenerateQuestAndMakeAvailable(DefDatabase<QuestScriptDef>.GetNamed("ArchotechGiftQuest"), slate);
-                    Find.LetterStack.ReceiveLetter(quest.name, quest.description, LetterDefOf.PositiveEvent, null, null, quest, null, null);
-                    Consciousness.needs.mood.thoughts.memories.TryGainMemory(ThoughtDef.Named("ArchotechSporeGiftDemanded"));
-                },
-                defaultLabel = TranslatorFormattedStringExtensions.Translate("ArchotechDemandGift"),
-                defaultDesc = TranslatorFormattedStringExtensions.Translate("ArchotechDemandGiftDesc"),
-                icon = ContentFinder<Texture2D>.Get("UI/Buttons/GiftMode")
-            };
-            if(!anyGiftsUnlocked)
-            {
-                demandGift.disabled = true;
-                demandGift.disabledReason = TranslatorFormattedStringExtensions.Translate("ArchotechNoGiftsUnlocked");
+                    Command_Toggle toggleGiftParticles = new Command_Toggle
+                    {
+                        toggleAction = delegate
+                        {
+                            GiftParticles = !GiftParticles;
+                        },
+                        defaultLabel = TranslatorFormattedStringExtensions.Translate("ArchotechSporeGiftParticles"),
+                        defaultDesc = TranslatorFormattedStringExtensions.Translate("ArchotechSporeGiftParticlesDesc"),
+                        icon = ContentFinder<Texture2D>.Get("UI/ExoticParticles"),
+                        isActive = () => GiftParticles
+                    };
+                    giz.Add(toggleGiftParticles);
+                }
+                /*Command_Action demandGift = new Command_Action
+                {
+                    action = delegate
+                    {
+                        MakeGift(5);
+                        Consciousness.needs.mood.thoughts.memories.TryGainMemory(ThoughtDef.Named("ArchotechSporeGiftDemanded"));
+                    },
+                    defaultLabel = TranslatorFormattedStringExtensions.Translate("ArchotechDemandGift"),
+                    defaultDesc = TranslatorFormattedStringExtensions.Translate("ArchotechDemandGiftDesc"),
+                    icon = ContentFinder<Texture2D>.Get("UI/Buttons/GiftMode")
+                };
+                if (!anyGiftsUnlocked)
+                {
+                    demandGift.disabled = true;
+                    demandGift.disabledReason = TranslatorFormattedStringExtensions.Translate("ArchotechNoGiftsUnlocked");
+                }
+                giz.Add(demandGift);*/
             }
-            giz.Add(demandGift);
 			
-            if(NumConnectedPillars>=4)
+            if (NumConnectedPillars>=4)
             {
                 Command_Action winGame = new Command_Action
                 {
@@ -677,6 +682,26 @@ namespace RimWorld
                 giz.Add(winGame);
             }
             return giz;
+        }
+
+        private void MakeGift(int numUnlock)
+        {
+            if (GiftParticles) //spawn particles
+            {
+                Thing thing = ThingMaker.MakeThing(ResourceBank.ThingDefOf.ArchotechExoticParticles);
+                thing.stackCount = Math.Min(numUnlock * Rand.RangeInclusive(7, 10), thing.def.stackLimit);
+                GenSpawn.Spawn(thing, Position, Map);
+            }
+            else //quest
+            {
+                Slate slate = new Slate();
+                slate.Set<string>("quest_name", "A Gift From " + Consciousness.Name.ToStringFull);
+                slate.Set<string>("archotech_name", Consciousness.Name.ToStringShort);
+                slate.Set<Map>("map", Map);
+                slate.Set<int>("value", numUnlock * 1000);
+                Quest quest = QuestUtility.GenerateQuestAndMakeAvailable(DefDatabase<QuestScriptDef>.GetNamed("ArchotechGiftQuest"), slate);
+                Find.LetterStack.ReceiveLetter(quest.name, quest.description, LetterDefOf.PositiveEvent, null, null, quest, null, null);
+            }
         }
 
         void TargetForBrainShock()
@@ -1017,18 +1042,21 @@ namespace RimWorld
                 builder.AppendLine(p.NameFullColored);
             }
             builder.AppendLine();
-
             builder.AppendLine(GameVictoryUtility.InMemoryOfSection());
-
-            builder.AppendLine("Save Our Ship 2 was developed by Kentington and Thain, with community maintenance and feature expansions by SonicTHI and Owlchemist");
-            builder.AppendLine("Special thanks to art/code contributors Oskar Potocki, K', Sarg, Karim, Saakra, and Revolus");
+            builder.AppendLine("Save Our Ship 2 was developed by Kentington, Thain and SonicTHI");
             builder.AppendLine();
-            builder.AppendLine("Shipwrights: (Insert Boi here), AlfadorZero, choppytehbear, Dammerung, DianaWinters, Foxtrot, Inert, Jameson, Moonshine Dusk");
-            builder.AppendLine("Testing squad: Phsarjk, i am has yes, Fuji, Reviire, Ian, choppytehbear, Jameson, Generic Scout, Waipa, Xanthos, BUTTERSKY, Karim, firethestars, Haldicar, jamhax, Jenden, maraworf, Red_Bunny, rostock, sprocket, El Jojo, Zahc, Dutchman, Zero Jackal, Tiberiumkyle, swordspell, SonicTHI, Shabm, Reviire, Kasodus, Red_Bunny, melandor, Madman, K', Jenden, Insert Witty Joke, Ifailatgaming, choppytehbear, Capitão Escarlate, Bunkier, Bumblybear, Bubbadoge, Abraxas, (Insert Boi here)");
+            builder.AppendLine("Special thanks to Owlchemist for his code contributions.");
+            builder.AppendLine();
+            builder.AppendLine("Other contributors (code, art, design or QA):");
+            builder.AppendLine("Oskar Potocki, Thamuzz1331, Trollam, Boris, K', Sarg, Karim, Saakra, Revolus, MatthewTeply, dkargin, HG, DianaWinters, UrbanMonkey, M.A.G.Gen., Epicguru, sdanchenko, m00nl1ght-dev");
+            builder.AppendLine();
+            builder.AppendLine("Shipwrights: Oninnaise, VVither_Skeleton, (Insert Boi here), AlfadorZero, choppytehbear, Dammerung, Foxtrot, Inert, Jameson, Moonshine Dusk");
+            builder.AppendLine();
+            builder.AppendLine("Testing squad: Buns Buns Cat, Phsarjk, i am has yes, Fuji, Reviire, Ian, Generic Scout, Waipa, Xanthos, BUTTERSKY, firethestars, Haldicar, jamhax, Jenden, maraworf, Red_Bunny, rostock, sprocket, El Jojo, Zahc, Dutchman, Zero Jackal, Tiberiumkyle, swordspell, Shabm, Kasodus, Red_Bunny, melandor, Madman, Jenden, Insert Witty Joke, Ifailatgaming, Capitão Escarlate, Bunkier, Bumblybear, Bubbadoge, Abraxas, Rage Nova, twsta, transcendant, thecaffiend, Manifold Paradox, WhiteGiverMa, Gago, Nerevarest");
 
             //Log.Message(builder.ToString());
 
-            Find.World.GetComponent<PastWorldUWO2>().SoSWin = true;
+            ShipInteriorMod2.WorldComp.SoSWin = true;
             GameVictoryUtility.ShowCredits(builder.ToString());
         }
     }

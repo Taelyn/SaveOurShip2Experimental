@@ -10,31 +10,25 @@ using RimworldMod;
 
 namespace RimWorld
 {
-	[StaticConstructorOnStartup]
 	class CompArchoHullConversion : ThingComp
     {
-		private int age;
+        public bool OptimizeMatter = true;
+        private int ticksToConversion;
+        private int age;
+        public float AgeDays => (float)age / 60000f;
 
-		private int ticksToConversion;
+        public ShipHeatMapComp mapComp;
+        ResearchProjectDef OptimizationProject = ResearchProjectDef.Named("ArchotechHullConversion");
+        Dictionary<ThingDef, ThingDef> Conversions = new Dictionary<ThingDef, ThingDef>();
+        protected CompProperties_ArchoHullConversion Props => (CompProperties_ArchoHullConversion)props;
+        public float CurrentRadius => Props.radiusPerDayCurve.Evaluate(AgeDays);
 
-		protected CompProperties_ArchoHullConversion Props => (CompProperties_ArchoHullConversion)props;
-
-		public float AgeDays => (float)age / 60000f;
-
-		public float CurrentRadius => Props.radiusPerDayCurve.Evaluate(AgeDays);
-
-		Dictionary<ThingDef, ThingDef> Conversions = new Dictionary<ThingDef, ThingDef>();
-
-		ResearchProjectDef OptimizationProject = ResearchProjectDef.Named("ArchotechHullConversion");
-
-		public bool OptimizeMatter = true;
-
-		public override void PostExposeData()
+        public override void PostExposeData()
 		{
 			Scribe_Values.Look(ref age, "age", 0);
 			Scribe_Values.Look(ref ticksToConversion, "ticksToConversion", 0);
 			Scribe_Values.Look(ref OptimizeMatter, "optimize", true);
-		}
+        }
 
 		public override void PostSpawnSetup(bool respawningAfterLoad)
 		{
@@ -63,11 +57,12 @@ namespace RimWorld
 			Conversions.Add(ThingDef.Named("ShipInside_PassiveVentMechanoid"), ThingDef.Named("ShipInside_PassiveVentArchotech"));
 			Conversions.Add(ThingDef.Named("ShipAirlockMech"), ThingDef.Named("ShipAirlockArchotech"));
 			Conversions.Add(ThingDef.Named("ShipHullTileMech"), ThingDef.Named("ShipHullTileArchotech"));
-		}
+            mapComp = parent?.Map?.GetComponent<ShipHeatMapComp>();
+        }
 
 		public override void CompTick()
 		{
-			if (!OptimizeMatter || !parent.Spawned || !OptimizationProject.IsFinished || this.parent.Map.IsSpace() && this.parent.Map.GetComponent<ShipHeatMapComp>().InCombat || this.parent.Map.mapPawns.AllPawns.Where(p => p.HostileTo(Faction.OfPlayer)).Any())
+			if (!OptimizeMatter || !parent.Spawned || !OptimizationProject.IsFinished || parent.Map.IsSpace() && parent.Map.GetComponent<ShipHeatMapComp>().InCombat || parent.Map.mapPawns.AllPawns.Where(p => p.HostileTo(Faction.OfPlayer)).Any())
 			{
 				return;
 			}
@@ -89,25 +84,25 @@ namespace RimWorld
 					ticksToConversion = 1;
 					num3 = GenMath.RoundRandom(1f / num2);
 				}
-				for (int i = 0; i < num3; i++)
+                for (int i = 0; i < num3; i++)
 				{
 					ConvertHullTile(currentRadius);
-				}
-			}
+                }
+            }
 		}
 
-		private void ConvertHullTile(float radius)
+		private bool ConvertHullTile(float radius)
         {
 			IntVec3 c = parent.Position + (Rand.InsideUnitCircleVec3 * radius).ToIntVec3();
-			if (!c.InBounds(parent.Map))
+			if (!c.InBounds(parent.Map) || mapComp.ShipIndexOnVec(parent.Position) != mapComp.ShipIndexOnVec(c))
 			{
-				return;
+				return false;
 			}
 			List<Thing> toDestroy = new List<Thing>();
 			List<Thing> toSpawn = new List<Thing>();
 			foreach(Thing t in c.GetThingList(parent.Map))
             {
-				if(Conversions.ContainsKey(t.def))
+				if (Conversions.ContainsKey(t.def))
                 {
 					Thing replacement = ThingMaker.MakeThing(Conversions[t.def]);
 					replacement.Rotation = t.Rotation;
@@ -132,8 +127,10 @@ namespace RimWorld
 				}
 				if (terrain != ResourceBank.TerrainDefOf.FakeFloorInsideShip && terrain!= ResourceBank.TerrainDefOf.FakeFloorInsideShip && terrain!= ResourceBank.TerrainDefOf.FakeFloorInsideShipMech && terrain!= ResourceBank.TerrainDefOf.ShipWreckageTerrain && terrain!= ResourceBank.TerrainDefOf.FakeFloorInsideShipFoam)
 					parent.Map.terrainGrid.SetTerrain(c, terrain);
-			}
-		}
+                return true;
+            }
+            return false;
+        }
 
         public override IEnumerable<Gizmo> CompGetGizmosExtra()
         {

@@ -10,13 +10,8 @@ using HarmonyLib;
 using System.Text;
 using UnityEngine;
 using Verse.AI.Group;
-using RimWorld.QuestGen;
 using RimworldMod;
-using System.Net;
 using System.IO;
-using System.Collections;
-using UnityEngine.SceneManagement;
-using System.Linq.Expressions;
 using static SaveOurShip2.ModSettings_SoS;
 
 namespace SaveOurShip2
@@ -26,28 +21,29 @@ namespace SaveOurShip2
 	{
 		static Setup()
         {
-			//manual stupidity prevention, good idea to eventually add all mod issues into it
+			//manual stupidity prevention, good idea to eventually add all mod issues into it, clearly not fool proof enough yet
             if (VersionControl.CurrentMinor < ShipInteriorMod2.SOS2ReqCurrentMinor || VersionControl.CurrentBuild < ShipInteriorMod2.SOS2ReqCurrentBuild)
             {
 				string error = "SOS2EXP " + ShipInteriorMod2.SOS2EXPversion + " requires Rimworld 1."+ ShipInteriorMod2.SOS2ReqCurrentMinor + "."+ ShipInteriorMod2.SOS2ReqCurrentBuild + " or greater!";
                 Log.Error(error);
-                LongEventHandler.QueueLongEvent(() => Find.WindowStack.Add(new Dialog_MessageBox(error.Colorize(Color.red), null, null, null, null, null, false, null, null, WindowLayer.Super)), null, false, null);
-				return;
+                string errorLong = error + "\n\nUpdate your game!";
+                LongEventHandler.QueueLongEvent(() => Find.WindowStack.Add(new Dialog_MessageBox(errorLong, "Quit", delegate(){ Root.Shutdown(); }, null, null, "ERROR: ".Colorize(Color.red), false, null, null, WindowLayer.Super)), null, false, null);
+
+                return;
             }
 			if (!ModLister.HasActiveModWithName("Harmony"))
             {
-                string error = "SOS2EXP requires Harmony! Download and enable it!";
+                string error = "ERROR: SOS2EXP requires Harmony! Download and enable it!";
                 Log.Error(error);
-                LongEventHandler.QueueLongEvent(() => Find.WindowStack.Add(new Dialog_MessageBox(error.Colorize(Color.red), null, null, null, null, null, false, null, null, WindowLayer.Super)), null, false, null);
+                string errorLong = error + "\n\nIt must be loaded at the top of the list, before Core!";
+                LongEventHandler.QueueLongEvent(() => Find.WindowStack.Add(new Dialog_MessageBox(errorLong, null, null, null, null, "ERROR: ".Colorize(Color.red), false, null, null, WindowLayer.Super)), null, false, null);
                 return;
             }
+            ShipInteriorMod2.HasSoS2CK = ModLister.HasActiveModWithName("Save Our Ship Creation Kit");
+            //Legacy methods. All of these could technically be merged
+            ShipInteriorMod2.DefsLoaded();
             Harmony pat = new Harmony("ShipInteriorMod2");
-			
-			//Legacy methods. All 3 of these could technically be merged
-			ShipInteriorMod2.DefsLoaded();
-			ShipInteriorMod2.SceneLoaded();
-			
-			pat.PatchAll();
+            pat.PatchAll();
 			//Needs an init delay
 			if (useSplashScreen) LongEventHandler.QueueLongEvent(() => ShipInteriorMod2.UseCustomSplashScreen(), "ShipInteriorMod2", false, null);
 		}
@@ -66,12 +62,14 @@ namespace SaveOurShip2
 			Scribe_Values.Look(ref renderPlanet, "renderPlanet", false);
 			Scribe_Values.Look(ref useSplashScreen, "useSplashScreen", true);
             Scribe_Values.Look(ref persistShipUI, "persistShipUI", false);
+            Scribe_Values.Look(ref showVersionUI, "showVersionUI", true);
 
             Scribe_Values.Look(ref minTravelTime, "minTravelTime", 5);
 			Scribe_Values.Look(ref maxTravelTime, "maxTravelTime", 100);
             Scribe_Values.Look(ref offsetUIx, "offsetUIx");
 			Scribe_Values.Look(ref offsetUIy, "offsetUIy");
-			base.ExposeData();
+            Scribe_Values.Look(ref enemyMapSize, "enemyMapSize");
+            base.ExposeData();
 		}
 
 		public static double
@@ -84,12 +82,14 @@ namespace SaveOurShip2
 			//useVacuumPathfinding = true,
 			renderPlanet = false,
 			useSplashScreen = true,
-			persistShipUI = false;
+			persistShipUI = false,
+			showVersionUI = true;
 		public static int
 			minTravelTime = 5,
 			maxTravelTime = 100,
             offsetUIx = 0,
-            offsetUIy = 0;
+            offsetUIy = 0,
+			enemyMapSize = 250;
 	}
 	public class ShipInteriorMod2 : Mod
 	{
@@ -97,17 +97,35 @@ namespace SaveOurShip2
 		{
 			base.GetSettings<ModSettings_SoS>();
         }
-        public static readonly string SOS2EXPversion = "V92";
+        public static readonly string SOS2EXPversion = "V98f9";
         public static readonly int SOS2ReqCurrentMinor = 4;
         public static readonly int SOS2ReqCurrentBuild = 3704;
 
         public static readonly float crittersleepBodySize = 0.7f;
 		public static bool loadedGraphics = false;
-		public static bool AirlockBugFlag = false; //shipmove
-		public static Building shipOriginRoot = null; //used for patched original launch code
+		public static bool AirlockBugFlag = false; //see CompSoShipPart
+        //public static Building shipOriginRoot = null; //used for patched original launch code
 		public static Map shipOriginMap = null; //used to check for shipmove map size problem, reset after move
+        public static bool SaveShipFlag = false; //used in patch to trigger ending scene
+        public static bool LoadShipFlag = false; //set to true in ScenPart_LoadShip.PostWorldGenerate and false in the patch to MapGenerator.GenerateMap
+        public static bool StartShipFlag = false; //as above but for ScenPart_StartInSpace
+        public static bool HasSoS2CK = false;
+        private static PastWorldUWO2 worldComp = null;
+        public static PastWorldUWO2 WorldComp
+        {
+            get
+            {
+                if (worldComp == null && Find.World != null)
+                    worldComp = (PastWorldUWO2)Find.World.components.First(x => x is PastWorldUWO2);
+                return worldComp;
+            }
+        }
+        public static void PurgeWorldComp()
+        {
+            worldComp = null;
+        }
 
-		public static RoofDef[] compatibleAirtightRoofs; // Additional array of compatible RoofDefs from other mods.
+        public static RoofDef[] compatibleAirtightRoofs; // Additional array of compatible RoofDefs from other mods.
 		public static TerrainDef[] rockTerrains; // Contains terrain types that are considered a "rock".
 		public static string[] allowedQuests;
 		public static List<ThingDef> randomPlants;
@@ -117,43 +135,56 @@ namespace SaveOurShip2
 		{
 			Listing_Standard options = new Listing_Standard();
 			options.Begin(inRect);
+            options.columnWidthInt = 300;
 
-			options.Label("SoS.Settings.DifficultySoS".Translate("0.5", "10", "1", Math.Round(difficultySoS, 1).ToString()), -1f, "SoS.Settings.DifficultySoS.Desc".Translate());
+            options.CheckboxLabeled("SoS.Settings.ShowVersionUI".Translate(SOS2EXPversion), ref showVersionUI, "SoS.Settings.ShowVersionUI.Desc".Translate());
+
+            options.Gap();
+            options.CheckboxLabeled("SoS.Settings.RenderPlanet".Translate(), ref renderPlanet, "SoS.Settings.RenderPlanet.Desc".Translate());
+            options.Gap();
+            options.Gap();
+            options.Label("SoS.Settings.UI".Translate());
+            options.GapLine();
+            options.CheckboxLabeled("SoS.Settings.UseSplashScreen".Translate(), ref useSplashScreen, "SoS.Settings.UseSplashScreen.Desc".Translate());
+            options.CheckboxLabeled("SoS.Settings.PersistShipUI".Translate(), ref persistShipUI, "SoS.Settings.PersistShipUI.Desc".Translate());
+            options.Label("SoS.Settings.OffsetUIx".Translate(), -1f, "SoS.Settings.OffsetUIx.Desc".Translate());
+            string bufferX = offsetUIx.ToString();
+            options.TextFieldNumeric<int>(ref offsetUIx, ref bufferX, int.MinValue, int.MaxValue);
+            options.Label("SoS.Settings.OffsetUIy".Translate(), -1f, "SoS.Settings.OffsetUIy.Desc".Translate());
+            string bufferY = offsetUIy.ToString();
+            options.TextFieldNumeric<int>(ref offsetUIy, ref bufferY, int.MinValue, int.MaxValue);
+
+            options.NewColumn();
+            options.columnWidthInt = 550;
+            options.Label("SoS.Settings.Gameplay".Translate());
+            options.GapLine();
+            options.CheckboxLabeled("SoS.Settings.EasyMode".Translate(), ref easyMode, "SoS.Settings.EasyMode.Desc".Translate());
+            options.Label("SoS.Settings.DifficultySoS".Translate("0.5", "10", "1", Math.Round(difficultySoS, 1).ToString()), -1f, "SoS.Settings.DifficultySoS.Desc".Translate());
 			difficultySoS = options.Slider((float)difficultySoS, 0.5f, 10f);
-
 			options.Label("SoS.Settings.FrequencySoS".Translate("0", "10", "1", Math.Round(frequencySoS, 1).ToString()), -1f, "SoS.Settings.FrequencySoS.Desc".Translate());
 			frequencySoS = options.Slider((float)frequencySoS, 0f, 10f);
-
 			options.Label("SoS.Settings.NavyShipChance".Translate("0", "1", "0.2", Math.Round(navyShipChance, 1).ToString()), -1f, "SoS.Settings.NavyShipChance.Desc".Translate());
 			navyShipChance = options.Slider((float)navyShipChance, 0f, 1f);
-
 			options.Label("SoS.Settings.FleetChance".Translate("0", "1", "0.3", Math.Round(fleetChance, 1).ToString()), -1f, "SoS.Settings.FleetChance.Desc".Translate());
 			fleetChance = options.Slider((float)fleetChance, 0f, 1f);
 
-			options.Gap();
-			options.CheckboxLabeled("SoS.Settings.EasyMode".Translate(), ref easyMode, "SoS.Settings.EasyMode.Desc".Translate());
-			//options.CheckboxLabeled("SoS.Settings.UseVacuumPathfinding".Translate(), ref useVacuumPathfinding, "SoS.Settings.UseVacuumPathfinding.Desc".Translate());
-			options.Gap();
-
-			options.Label("SoS.Settings.MinTravelTime".Translate("1", "50", "5", minTravelTime.ToString()), -1f, "SoS.Settings.MinTravelTime.Desc".Translate());
+            //options.CheckboxLabeled("SoS.Settings.UseVacuumPathfinding".Translate(), ref useVacuumPathfinding, "SoS.Settings.UseVacuumPathfinding.Desc".Translate());
+            options.Gap();
+            options.Gap();
+            options.Label("SoS.Settings.Misc".Translate());
+            options.GapLine();
+            options.Label("SoS.Settings.MinTravelTime".Translate("1", "50", "5", minTravelTime.ToString()), -1f, "SoS.Settings.MinTravelTime.Desc".Translate());
 			minTravelTime = (int)options.Slider(minTravelTime, 1f, 50f);
-
 			options.Label("SoS.Settings.MaxTravelTime".Translate("50", "1000", "100", maxTravelTime.ToString()), -1f, "SoS.Settings.MaxTravelTime.Desc".Translate());
 			maxTravelTime = (int)options.Slider(maxTravelTime, 1f, 1000f);
+            options.Gap();
+            options.Gap();
+            options.Label("SoS.Settings.Danger".Translate());
+            options.GapLine();
+            options.Label("SoS.Settings.EnemyMapSize".Translate("250", "750", "250", enemyMapSize.ToString()), -1f, "SoS.Settings.EnemyMapSize.Desc".Translate());
+            enemyMapSize = (int)options.Slider(enemyMapSize, 250, 750);
 
-			options.CheckboxLabeled("SoS.Settings.RenderPlanet".Translate(), ref renderPlanet, "SoS.Settings.RenderPlanet.Desc".Translate());
-			options.CheckboxLabeled("SoS.Settings.UseSplashScreen".Translate(), ref useSplashScreen, "SoS.Settings.UseSplashScreens.Desc".Translate());
-			options.Gap();
-            options.CheckboxLabeled("SoS.Settings.PersistShipUI".Translate(), ref persistShipUI, "SoS.Settings.PersistShipUI.Desc".Translate());
-            options.Label("SoS.Settings.OffsetUIx".Translate(), -1f, "SoS.Settings.OffsetUIx.Desc".Translate());
-			string bufferX = offsetUIx.ToString();
-			options.TextFieldNumeric<int>(ref offsetUIx, ref bufferX, int.MinValue, int.MaxValue);
-
-			options.Label("SoS.Settings.OffsetUIy".Translate(), -1f, "SoS.Settings.OffsetUIy.Desc".Translate());
-			string bufferY = offsetUIy.ToString();
-			options.TextFieldNumeric<int>(ref offsetUIy, ref bufferY, int.MinValue, int.MaxValue);
-
-			options.End();
+            options.End();
 			base.DoSettingsWindowContents(inRect);
 		}
 		public override string SettingsCategory()
@@ -176,25 +207,25 @@ namespace SaveOurShip2
 
 			wreckDictionary = new Dictionary<ThingDef, ThingDef>
 			{
-				{ThingDef.Named("ShipHullTile"), ResourceBank.ThingDefOf.ShipHullTileWrecked},
-				{ThingDef.Named("ShipHullTileMech"), ResourceBank.ThingDefOf.ShipHullTileWrecked},
-				{ThingDef.Named("ShipHullTileArchotech"), ResourceBank.ThingDefOf.ShipHullTileWrecked},
-				{ThingDef.Named("Ship_Beam"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("Ship_BeamMech"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("Ship_BeamArchotech"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("Ship_Beam_Unpowered"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("Ship_BeamMech_Unpowered"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("Ship_BeamArchotech_Unpowered"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("ShipInside_SolarGenerator"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("ShipInside_SolarGeneratorMech"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("ShipInside_SolarGeneratorArchotech"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("ShipInside_PassiveVent"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("ShipInside_PassiveVentMechanoid"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("ShipInside_PassiveVentArchotech"), ThingDef.Named("Ship_Beam_Wrecked")},
-				{ThingDef.Named("ShipAirlock"), ThingDef.Named("ShipAirlockWrecked")},
-				{ThingDef.Named("ShipAirlockMech"), ThingDef.Named("ShipAirlockWrecked")},
-				{ThingDef.Named("ShipAirlockArchotech"), ThingDef.Named("ShipAirlockWrecked")},
-				{ThingDef.Named("ShipAirlockBeam"), ThingDef.Named("Ship_Beam_Wrecked")}
+				{ResourceBank.ThingDefOf.ShipHullTile, ResourceBank.ThingDefOf.ShipHullTileWrecked},
+				{ResourceBank.ThingDefOf.ShipHullTileMech, ResourceBank.ThingDefOf.ShipHullTileWrecked},
+				{ResourceBank.ThingDefOf.ShipHullTileArchotech, ResourceBank.ThingDefOf.ShipHullTileWrecked},
+				{ResourceBank.ThingDefOf.Ship_Beam, ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ResourceBank.ThingDefOf.Ship_BeamMech, ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ResourceBank.ThingDefOf.Ship_BeamArchotech, ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ThingDef.Named("Ship_Beam_Unpowered"), ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ThingDef.Named("Ship_BeamMech_Unpowered"), ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ThingDef.Named("Ship_BeamArchotech_Unpowered"), ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ThingDef.Named("ShipInside_SolarGenerator"), ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ThingDef.Named("ShipInside_SolarGeneratorMech"), ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ThingDef.Named("ShipInside_SolarGeneratorArchotech"), ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ThingDef.Named("ShipInside_PassiveVent"), ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ThingDef.Named("ShipInside_PassiveVentMechanoid"), ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ThingDef.Named("ShipInside_PassiveVentArchotech"), ResourceBank.ThingDefOf.Ship_Beam_Wrecked},
+				{ResourceBank.ThingDefOf.ShipAirlock, ResourceBank.ThingDefOf.ShipAirlockWrecked},
+				{ThingDef.Named("ShipAirlockMech"), ResourceBank.ThingDefOf.ShipAirlockWrecked},
+				{ThingDef.Named("ShipAirlockArchotech"), ResourceBank.ThingDefOf.ShipAirlockWrecked},
+				{ThingDef.Named("ShipAirlockBeam"), ResourceBank.ThingDefOf.Ship_Beam_Wrecked}
 			};
 
 			var compatibleRoofs = new List<RoofDef>();
@@ -243,14 +274,55 @@ namespace SaveOurShip2
 				"VFEA_OpportunitySite_SealedVault",
 				"VFEM_OpportunitySite_LootedVault"
 			};
+            //shuttle, archolife cosmetics
+            if (!loadedGraphics)
+            {
+                foreach (ThingDef thingToResolve in CompShuttleCosmetics.GraphicsToResolve.Keys)
+                {
+                    Graphic_Single[] graphicsResolved = new Graphic_Single[CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphics.Count];
+                    Graphic_Multi[] graphicsHoverResolved = new Graphic_Multi[CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphicsHover.Count];
 
-			/*foreach (TraitDef AITrait in DefDatabase<TraitDef>.AllDefs.Where(t => t.exclusionTags.Contains("AITrait")))
+                    for (int i = 0; i < CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphics.Count; i++)
+                    {
+                        Graphic_Single graphic = new Graphic_Single();
+                        GraphicRequest req = new GraphicRequest(typeof(Graphic_Single), CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphics[i].texPath, ShaderDatabase.Cutout, CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphics[i].drawSize, Color.white, Color.white, CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphics[i], 0, null, "");
+                        graphic.Init(req);
+                        graphicsResolved[i] = graphic;
+                    }
+                    for (int i = 0; i < CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphicsHover.Count; i++)
+                    {
+                        Graphic_Multi graphic = new Graphic_Multi();
+                        GraphicRequest req = new GraphicRequest(typeof(Graphic_Multi), CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphicsHover[i].texPath, ShaderDatabase.Cutout, CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphicsHover[i].drawSize, Color.white, Color.white, CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphicsHover[i], 0, null, "");
+                        graphic.Init(req);
+                        graphicsHoverResolved[i] = graphic;
+                    }
+
+                    CompShuttleCosmetics.graphics.Add(thingToResolve.defName, graphicsResolved);
+                    CompShuttleCosmetics.graphicsHover.Add(thingToResolve.defName, graphicsHoverResolved);
+                }
+                foreach (ThingDef thingToResolve in CompArcholifeCosmetics.GraphicsToResolve.Keys)
+                {
+                    Graphic_Multi[] graphicsResolved = new Graphic_Multi[CompArcholifeCosmetics.GraphicsToResolve[thingToResolve].graphics.Count];
+                    for (int i = 0; i < CompArcholifeCosmetics.GraphicsToResolve[thingToResolve].graphics.Count; i++)
+                    {
+                        Graphic_Multi graphic = new Graphic_Multi();
+                        GraphicRequest req = new GraphicRequest(typeof(Graphic_Multi), CompArcholifeCosmetics.GraphicsToResolve[thingToResolve].graphics[i].texPath, ShaderDatabase.Cutout, CompArcholifeCosmetics.GraphicsToResolve[thingToResolve].graphics[i].drawSize, Color.white, Color.white, CompArcholifeCosmetics.GraphicsToResolve[thingToResolve].graphics[i], 0, null, "");
+                        graphic.Init(req);
+                        graphicsResolved[i] = graphic;
+                    }
+
+                    CompArcholifeCosmetics.graphics.Add(thingToResolve.defName, graphicsResolved);
+                }
+                loadedGraphics = true;
+            }
+
+            /*foreach (TraitDef AITrait in DefDatabase<TraitDef>.AllDefs.Where(t => t.exclusionTags.Contains("AITrait")))
             {
                 typeof(TraitDef).GetField("commonality", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(AITrait, 0);
             }*/
-			//foreach (EnemyShipDef def in DefDatabase<EnemyShipDef>.AllDefs)
-			//{
-			/*def.ConvertToSymbolTable();
+            //foreach (EnemyShipDef def in DefDatabase<EnemyShipDef>.AllDefs)
+            //{
+            /*def.ConvertToSymbolTable();
 			def.ConvertToBigString();
 			string path = Path.Combine(GenFilePaths.SaveDataFolderPath, "RecycledShips");
 			DirectoryInfo dir = new DirectoryInfo(path);
@@ -296,53 +368,10 @@ namespace SaveOurShip2
 				Scribe.ExitNode();
 				Scribe_Values.Look<string>(ref def.bigString, "bigString");
 			});*/
-			//def.ConvertFromBigString();
-			//def.ConvertFromSymbolTable();
-			//}
-		}
-		public static void SceneLoaded()
-		{
-			if (!loadedGraphics)
-			{
-				foreach (ThingDef thingToResolve in CompShuttleCosmetics.GraphicsToResolve.Keys)
-				{
-					Graphic_Single[] graphicsResolved = new Graphic_Single[CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphics.Count];
-					Graphic_Multi[] graphicsHoverResolved = new Graphic_Multi[CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphicsHover.Count];
-
-					for (int i = 0; i < CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphics.Count; i++)
-					{
-						Graphic_Single graphic = new Graphic_Single();
-						GraphicRequest req = new GraphicRequest(typeof(Graphic_Single), CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphics[i].texPath, ShaderDatabase.Cutout, CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphics[i].drawSize, Color.white, Color.white, CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphics[i], 0, null, "");
-						graphic.Init(req);
-						graphicsResolved[i] = graphic;
-					}
-					for (int i = 0; i < CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphicsHover.Count; i++)
-					{
-						Graphic_Multi graphic = new Graphic_Multi();
-						GraphicRequest req = new GraphicRequest(typeof(Graphic_Multi), CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphicsHover[i].texPath, ShaderDatabase.Cutout, CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphicsHover[i].drawSize, Color.white, Color.white, CompShuttleCosmetics.GraphicsToResolve[thingToResolve].graphicsHover[i], 0, null, "");
-						graphic.Init(req);
-						graphicsHoverResolved[i] = graphic;
-					}
-
-					CompShuttleCosmetics.graphics.Add(thingToResolve.defName, graphicsResolved);
-					CompShuttleCosmetics.graphicsHover.Add(thingToResolve.defName, graphicsHoverResolved);
-				}
-				foreach (ThingDef thingToResolve in CompArcholifeCosmetics.GraphicsToResolve.Keys)
-                {
-					Graphic_Multi[] graphicsResolved = new Graphic_Multi[CompArcholifeCosmetics.GraphicsToResolve[thingToResolve].graphics.Count];
-					for (int i = 0; i < CompArcholifeCosmetics.GraphicsToResolve[thingToResolve].graphics.Count; i++)
-                    {
-						Graphic_Multi graphic = new Graphic_Multi();
-						GraphicRequest req = new GraphicRequest(typeof(Graphic_Multi), CompArcholifeCosmetics.GraphicsToResolve[thingToResolve].graphics[i].texPath, ShaderDatabase.Cutout, CompArcholifeCosmetics.GraphicsToResolve[thingToResolve].graphics[i].drawSize, Color.white, Color.white, CompArcholifeCosmetics.GraphicsToResolve[thingToResolve].graphics[i], 0, null, "");
-						graphic.Init(req);
-						graphicsResolved[i] = graphic;
-                    }
-
-					CompArcholifeCosmetics.graphics.Add(thingToResolve.defName, graphicsResolved);
-                }
-				loadedGraphics = true;
-			}
-		}
+            //def.ConvertFromBigString();
+            //def.ConvertFromSymbolTable();
+            //}
+        }
 		public static void UseCustomSplashScreen()
 		{
 			((UI_BackgroundMain)UIMenuBackgroundManager.background).overrideBGImage = ResourceBank.Splash;
@@ -357,9 +386,9 @@ namespace SaveOurShip2
 		{
 			if (roof == null)
 				return false;
-			if (roof == ResourceBank.RoofDefOf.RoofShip)
-				return true;
-			if (compatibleAirtightRoofs != null)
+            if (roof == ResourceBank.RoofDefOf.RoofShip || roof == RoofDefOf.RoofRockThick)
+                return true;
+            if (compatibleAirtightRoofs != null)
 			{
 				// I do not expect a lot of values here.
 				foreach (var r in compatibleAirtightRoofs)
@@ -415,40 +444,18 @@ namespace SaveOurShip2
             Map map = MapGenerator.GenerateMap(new IntVec3(400, 1, 400), orbiter, orbiter.MapGeneratorDef);
             map.fogGrid.ClearAllFog();
 			return map;
-		}
-		public static void GenerateImpactSite()
+        }
+        public static Map FindPlayerShipMap()
 		{
-			WorldObject impactSite =
-				WorldObjectMaker.MakeWorldObject(DefDatabase<WorldObjectDef>.GetNamed("ShipEngineImpactSite"));
-			int tile = TileFinder.RandomStartingTile();
-			impactSite.Tile = tile;
-			Find.WorldObjects.Add(impactSite);
-		}
-		public static WorldObject GenerateArchotechPillarBSite()
-		{
-			WorldObject impactSite =
-				WorldObjectMaker.MakeWorldObject(DefDatabase<WorldObjectDef>.GetNamed("MoonPillarSite"));
-			int tile = TileFinder.RandomStartingTile();
-			impactSite.Tile = tile;
-			Find.WorldObjects.Add(impactSite);
-			return impactSite;
-		}
-		public static void GenerateArchotechPillarCSite()
-		{
-			WorldObject impactSite =
-				WorldObjectMaker.MakeWorldObject(DefDatabase<WorldObjectDef>.GetNamed("TribalPillarSite"));
-			int tile = TileFinder.RandomStartingTile();
-			impactSite.Tile = tile;
-			Find.WorldObjects.Add(impactSite);
-		}
-		public static void GenerateArchotechPillarDSite()
-		{
-			WorldObject impactSite =
-				WorldObjectMaker.MakeWorldObject(DefDatabase<WorldObjectDef>.GetNamed("InsectPillarSite"));
-			int tile = TileFinder.RandomStartingTile();
-			impactSite.Tile = tile;
-			Find.WorldObjects.Add(impactSite);
-		}
+			return ((MapParent)Find.WorldObjects.AllWorldObjects.Where(ob => ob.def == ResourceBank.WorldObjectDefOf.ShipOrbiting).FirstOrDefault())?.Map;
+        }
+		public static WorldObject GenerateSite(string defName)
+        {
+            WorldObject site = WorldObjectMaker.MakeWorldObject(DefDatabase<WorldObjectDef>.GetNamed(defName));
+            site.Tile = TileFinder.RandomStartingTile();
+            Find.WorldObjects.Add(site);
+            return site;
+        }
 		public static SpaceNavyDef ValidRandomNavy(Faction hostileTo = null, bool needsShips = true, bool bountyHunts = false)
 		{
 			return DefDatabase<SpaceNavyDef>.AllDefs.Where(navy =>
@@ -551,9 +558,10 @@ namespace SaveOurShip2
 			return true;
 		}
 		public static void GenerateShip(EnemyShipDef shipDef, Map map, PassingShip passingShip, Faction fac, Lord lord, out List<Building> cores, bool shipActive = true, bool clearArea = false, int wreckLevel = 0, int offsetX = -1, int offsetZ = -1, SpaceNavyDef navyDef = null)
-		{
-			//SC map.GetComponent<ShipHeatMapComp>().CacheOff = true;
-			List<IntVec3> area = new List<IntVec3>();
+        {
+			var mapComp = map.GetComponent<ShipHeatMapComp>();
+            mapComp.CacheOff = true;
+            List<IntVec3> area = new List<IntVec3>();
 			List<Thing> planters = new List<Thing>();
 			List<IntVec3> areaOut;
 			List<Thing> plantersOut;
@@ -565,12 +573,12 @@ namespace SaveOurShip2
 				cores.AddRange(coresOut);
 				area.AddRange(areaOut);
 				planters.AddRange(plantersOut);
-			}
-            else
+            }
+            else //non procgen fleet
 			{
 				for (int i = 0; i < shipDef.ships.Count; i++)
 				{
-					Log.Message("Spawning fleet ship nr." + i);
+					Log.Message("SOS2: ".Colorize(Color.cyan) + map + " Spawning fleet ship nr." + i);
 					var genShip = DefDatabase<EnemyShipDef>.GetNamedSilentFail(shipDef.ships[i].ship);
 					if (genShip == null)
 					{
@@ -587,11 +595,12 @@ namespace SaveOurShip2
 		}
 		public static void GenerateFleet(float CR, Map map, PassingShip passingShip, Faction fac, Lord lord, out List<Building> cores, bool shipActive = true, bool clearArea = false, int wreckLevel = 0, SpaceNavyDef navyDef = null)
 		{
-			//use player points to spawn ships of the same navy, fit z, random x
-			//main + twin, twin, twin + escort, squadron, tradeship + escorts, tradeship + large, tradeship + large + escort
-			//60-20-20,50-50,40-40-10-10
-			//SC map.GetComponent<ShipHeatMapComp>().CacheOff = true;
-			List<EnemyShipDef> ships;
+            //use player points to spawn ships of the same navy, fit z, random x
+            //main + twin, twin, twin + escort, squadron, tradeship + escorts, tradeship + large, tradeship + large + escort
+            //60-20-20,50-50,40-40-10-10
+            var mapComp = map.GetComponent<ShipHeatMapComp>();
+            mapComp.CacheOff = true;
+            List<EnemyShipDef> ships;
 			bool allowNavyExc = true;
 			if (navyDef != null)
 				ships = navyDef.enemyShipDefs;
@@ -610,7 +619,7 @@ namespace SaveOurShip2
 			bool firstLarger = Rand.Bool;
 			bool escorts = Rand.Bool;
 			float CRfactor = CR;
-			Log.Message("Spawning random fleet from CR: " + CR + " navyDef: " + navyDef + " tradeShip: " + tradeShip + " firstLarger: " + firstLarger + " escorts: " + escorts);
+			Log.Message("SOS2: ".Colorize(Color.cyan) + map + " Spawning random fleet from CR: " + CR + " navyDef: " + navyDef + " tradeShip: " + tradeShip + " firstLarger: " + firstLarger + " escorts: " + escorts);
 			int marginZ;
 			if (firstLarger)
 			{
@@ -708,15 +717,15 @@ namespace SaveOurShip2
 				}
 				i++;
 			}
-			PostGenerateShipDef(map, clearArea, area, planters);
+            PostGenerateShipDef(map, clearArea, area, planters);
 		}
 		public static void GenerateShipDef(EnemyShipDef shipDef, Map map, PassingShip passingShip, Faction fac, Lord lord, out List<Building> cores, out List<IntVec3> cellsToFog, out List<Thing> planters, bool shipActive = true, bool clearArea = false, int wreckLevel = 0, int offsetX = -1, int offsetZ = -1, SpaceNavyDef navyDef = null)
-		{
-			cellsToFog = new List<IntVec3>();
+        {
+            cellsToFog = new List<IntVec3>();
 			planters = new List<Thing>();
 			cores = new List<Building>();
 			bool unlockedJT = false;
-			if (WorldSwitchUtility.PastWorldTracker.Unlocks.Contains("JTDriveToo"))
+			if (WorldComp.Unlocks.Contains("JTDriveToo"))
 				unlockedJT = true;
 			bool ideoActive = false;
 			if (ModsConfig.IdeologyActive && (fac != Faction.OfAncientsHostile || fac != Faction.OfAncients || fac != Faction.OfMechanoids))
@@ -787,12 +796,12 @@ namespace SaveOurShip2
 			}
 			if (!shipDef.core.shapeOrDef.NullOrEmpty() && wreckLevel < 3)
 			{
-				Building bridge = (Building)ThingMaker.MakeThing(ThingDef.Named(shipDef.core.shapeOrDef));
-				bridge.SetFaction(fac);
+                Building_ShipBridge bridge = (Building_ShipBridge)ThingMaker.MakeThing(ThingDef.Named(shipDef.core.shapeOrDef));
+				bridge.SetFactionDirect(fac);
 				GenSpawn.Spawn(bridge, new IntVec3(offset.x + shipDef.core.x, 0, offset.z + shipDef.core.z), map, shipDef.core.rot);
 				bridge.TryGetComp<CompPowerTrader>().PowerOn = true;
 				cores.Add(bridge);
-				((Building_ShipBridge)bridge).ShipName = shipDef.label;
+				bridge.ShipName = shipDef.label;
 			}
 			//color navy ships without custom paint
 			bool rePaint = false; 
@@ -809,8 +818,14 @@ namespace SaveOurShip2
                 {
                     IntVec3 adjPos = new IntVec3(offset.x + shape.x, 0, offset.z + shape.z);
                     if (shape.shapeOrDef.Equals("PawnSpawnerGeneric"))
-					{
-						PawnGenerationRequest req = new PawnGenerationRequest(DefDatabase<PawnKindDef>.GetNamed(shape.stuff), fac);
+                    {
+                        if (shape.faction != null) //faction override
+                        {
+                            var facOver = Find.FactionManager.FirstFactionOfDef(FactionDef.Named(shape.faction));
+                            if (facOver != null)
+                                fac = facOver;
+                        }
+                        PawnGenerationRequest req = new PawnGenerationRequest(DefDatabase<PawnKindDef>.GetNamed(shape.stuff), fac);
 						Pawn pawn = PawnGenerator.GeneratePawn(req);
 						lord?.AddPawn(pawn);
                         GenSpawn.Spawn(pawn, adjPos, map);
@@ -851,9 +866,7 @@ namespace SaveOurShip2
 						//def replacers
 						if (def.IsBuildingArtificial)
 						{
-							if (!royActive && def.Equals(ThingDefOf.Throne))
-								def = DefDatabase<ThingDef>.GetNamed("Armchair");
-							else if (wreckLevel > 2 && wreckDictionary.ContainsKey(def)) //replace ship walls/floor
+							if (wreckLevel > 2 && wreckDictionary.ContainsKey(def)) //replace ship walls/floor
 							{
 								def = wreckDictionary[def];
 								isWrecked = true;
@@ -861,19 +874,23 @@ namespace SaveOurShip2
 							else if (!unlockedJT && def.HasComp(typeof(CompEngineTrail))) //replace JT drives if not unlocked via story
 							{
 								if (def == ResourceBank.ThingDefOf.Ship_Engine_Interplanetary)
-									def = DefDatabase<ThingDef>.GetNamed("Ship_Engine");
+									def = ResourceBank.ThingDefOf.Ship_Engine;
 								else if (def == ResourceBank.ThingDefOf.Ship_Engine_Interplanetary_Large)
-									def = DefDatabase<ThingDef>.GetNamed("Ship_Engine_Large");
-							}
-							else if (isMechs && def.building.IsTurret) //replace turets with mech version if ROY active
-							{
-								if (def.defName.Equals("Turret_MiniTurret"))
-                                    def = DefDatabase<ThingDef>.GetNamed("Turret_AutoMiniTurret");
-                                else if (def.defName.Equals("Turret_Autocannon"))
+									def = ResourceBank.ThingDefOf.Ship_Engine_Large;
+                            }
+                            else if (isMechs && def.building.IsTurret) //replace turets with mech version if ROY active
+                            {
+                                if (def == ThingDefOf.Turret_MiniTurret)
+                                    def = ThingDefOf.Turret_AutoMiniTurret;
+                                else if (def == ResourceBank.ThingDefOf.Turret_Autocannon)
                                     def = DefDatabase<ThingDef>.GetNamed("Turret_AutoChargeBlaster");
-                                else if (def.defName.Equals("Turret_Sniper"))
+                                else if (def == ResourceBank.ThingDefOf.Turret_Sniper)
                                     def = DefDatabase<ThingDef>.GetNamed("Turret_AutoInferno");
                             }
+                            else if (!royActive && def.Equals(ThingDefOf.Throne))
+                            {
+								def = DefDatabase<ThingDef>.GetNamed("Armchair");
+							}
 						}
 						//make thing
 						if (def.MadeFromStuff)
@@ -909,16 +926,22 @@ namespace SaveOurShip2
                             if (wreckLevel > 1 && !isWrecked)
 								wreckDestroy.Add(b);
 
-							if (thing.def.CanHaveFaction) //set faction to all but plating
+							if (thing.def.CanHaveFaction) //set faction
                             {
-                                if (partComp != null && partComp.Props.isPlating && !partComp.Props.isHull)
+                                if (partComp != null && partComp.Props.Plating)
                                 {
+                                    if (fac == Faction.OfPlayer) //only set faction to player hull
+                                        thing.SetFactionDirect(fac);
                                     cellsToFog.Add(thing.Position);
                                     continue;
                                 }
-                                if (!(thing.def == ResourceBank.ThingDefOf.ShipHullTileWrecked || thing.def == ResourceBank.ThingDefOf.ShipAirlockWrecked || thing.def.thingClass == typeof(Building_ArchotechPillar)))
-                                    thing.SetFaction(fac);
-							}
+                                //no faction for pillars, wrecked airlocks except player
+                                if ((thing.def == ResourceBank.ThingDefOf.ShipAirlockWrecked && fac != Faction.OfPlayer) || thing.def.thingClass == typeof(Building_ArchotechPillar))
+								{
+									continue;
+                                }
+                                thing.SetFactionDirect(fac);
+                            }
 							var batComp = b.TryGetComp<CompPowerBattery>();
 							if (batComp != null)
 							{
@@ -1003,7 +1026,7 @@ namespace SaveOurShip2
                                     thing.stackCount = (int)Mathf.Max(500 / thing.MarketValue, 1);
                             }
                             if (thing.def.CanHaveFaction)
-                                thing.SetFaction(fac);
+                                thing.SetFactionDirect(fac);
 						}
 					}
 					else if (DefDatabase<TerrainDef>.GetNamedSilentFail(shape.shapeOrDef) != null)
@@ -1028,7 +1051,7 @@ namespace SaveOurShip2
 				}
 				catch (Exception e)
 				{
-					Log.Warning("Ship part was not generated properly: " + shape.shapeOrDef + " at " + offset.x + shape.x + ", " + offset.z + shape.z + " Shipdef pos: |" + shape.x + "," + shape.z + ",0,*|\n" + e);
+					Log.Warning("SOS2: ".Colorize(Color.cyan) + map + "Ship part was not generated properly: ".Colorize(Color.red) + shape.shapeOrDef + " at " + offset.x + shape.x + ", " + offset.z + shape.z + " Shipdef pos: |" + shape.x + "," + shape.z + ",0,*|\n" + e);
 				}
 			}
 			//generate SOS2 shapedefs
@@ -1048,7 +1071,7 @@ namespace SaveOurShip2
 					if (def.defName.Equals("CasketFilled"))
 					{
 						Thing thing = ThingMaker.MakeThing(ThingDefOf.CryptosleepCasket);
-						thing.SetFaction(fac);
+						thing.SetFactionDirect(fac);
 						Pawn sleeper = PawnGenerator.GeneratePawn(new PawnGenerationRequest(PawnKindDefOf.Slave, Faction.OfAncients, forceGenerateNewPawn: true, certainlyBeenInCryptosleep: true));
 						((Building_CryptosleepCasket)thing).TryAcceptThing(sleeper);
 						GenSpawn.Spawn(thing, adjPos, map, shape.rot);
@@ -1062,21 +1085,15 @@ namespace SaveOurShip2
 						else
 							thing = ThingMaker.MakeThing(ThingDef.Named(def.defName.Substring(0, def.defName.Length - 8)));
 						if (thing is Pawn p)
-						{
-							if (p.RaceProps.IsMechanoid)
-								p.SetFactionDirect(Faction.OfMechanoids);
-							else if (p.RaceProps.BloodDef.defName.Equals("Filth_BloodInsect"))
-								p.SetFactionDirect(Faction.OfInsects);
-							p.ageTracker.AgeBiologicalTicks = 36000000;
-							p.ageTracker.AgeChronologicalTicks = 36000000;
-							if (lord != null)
-								lord.AddPawn(p);
+                        {
+                            SoShipPawnGen(p);
+                            lord?.AddPawn(p);
 							pawnsOnShip.Add(p);
 						}
 						else if (thing is Hive)
 							thing.SetFactionDirect(Faction.OfInsects);
 						else
-							thing.SetFaction(fac);
+							thing.SetFactionDirect(fac);
 						GenSpawn.Spawn(thing, adjPos, map);
 					}
 					else if (!def.defName.Equals("Cargo")) //everything else
@@ -1099,22 +1116,16 @@ namespace SaveOurShip2
 						if (thing.def.CanHaveFaction)
 						{
 							if (thing is Pawn p)
-							{
-								if (p.RaceProps.IsMechanoid)
-									p.SetFactionDirect(Faction.OfMechanoids);
-								else if (p.RaceProps.BloodDef.defName.Equals("Filth_BloodInsect"))
-									p.SetFactionDirect(Faction.OfInsects);
-								p.ageTracker.AgeBiologicalTicks = 36000000;
-								p.ageTracker.AgeChronologicalTicks = 36000000;
-								if (lord != null)
-									lord.AddPawn(p);
-								pawnsOnShip.Add(p);
-							}
-							else if (thing is Hive)
+                            {
+                                SoShipPawnGen(p);
+                                lord?.AddPawn(p);
+                                pawnsOnShip.Add(p);
+                            }
+                            else if (thing is Hive)
 								thing.SetFactionDirect(Faction.OfInsects);
 							else
-								thing.SetFaction(fac);
-						}
+								thing.SetFactionDirect(fac);
+                        }
 						if (thing is Building_ShipTurret turret)
 							turret.burstCooldownTicksLeft = 300;
 						if (thing.TryGetComp<CompColorable>() != null)
@@ -1134,7 +1145,7 @@ namespace SaveOurShip2
 				}
 				catch (Exception e)
 				{
-					Log.Warning("Ship shape was not generated properly: " + shape.shapeOrDef + " at " + offset.x + shape.x + ", " + offset.z + shape.z + " Shipdef pos: |" + shape.x + "," + shape.z + ",0,*|\n" + e);
+					Log.Warning("SOS2: ".Colorize(Color.cyan) + map + "Ship shape was not generated properly: ".Colorize(Color.red) + shape.shapeOrDef + " at " + offset.x + shape.x + ", " + offset.z + shape.z + " Shipdef pos: |" + shape.x + "," + shape.z + ",0,*|\n" + e);
 				}
 			}
 			//cargo
@@ -1162,7 +1173,7 @@ namespace SaveOurShip2
 					while (loot.Count > 0 && actualTotalValue > 0)
 					{
 						Thing random = loot.RandomElement();
-						actualTotalValue -= random.MarketValue;
+						actualTotalValue -= random.MarketValue * random.stackCount;
 						actualLoot.Add(random);
 						loot.Remove(random);
 					}
@@ -1189,12 +1200,12 @@ namespace SaveOurShip2
 				//split
 				if ((wreckLevel == 2 || wreckLevel == 3) && size > 1000 && Rand.Chance(0.7f))
                 {
-                    MakeLines(shipDef, map, wreckLevel, offset);
+                    MakeLines(shipDef, map, fac, wreckLevel, offset);
 					madeLines = true;
 				}
 				if ((wreckLevel == 2 || wreckLevel == 3) && size > 8000)
 				{
-					MakeLines(shipDef, map, wreckLevel, offset);
+					MakeLines(shipDef, map, fac, wreckLevel, offset);
 				}
 				//holes, surounded by wreck
 				int adj = 1 + (size / 1000);
@@ -1203,7 +1214,7 @@ namespace SaveOurShip2
 				if (size > 4000 && wreckLevel > 1 && !madeLines)
 					holeNum += Rand.RangeInclusive(adj, adj - 1 + (wreckLevel * 2));
 				CellRect rect = new CellRect(offset.x - 1, offset.z - 1, shipDef.sizeX + 1, shipDef.sizeZ + 1);
-				MakeHoles(FindCellOnOuterHull(map, holeNum, rect), map, wreckLevel, 1.9f, 4.9f);
+				MakeHoles(FindCellOnOuterHull(map, holeNum, rect), map, fac, wreckLevel, 1.9f, 4.9f);
 				//buildings
 				List<Building> toKill = new List<Building>();
 				if (wreckLevel > 2)
@@ -1255,7 +1266,7 @@ namespace SaveOurShip2
 								mapComp.InvaderLord = LordMaker.MakeNewLord(invaderFac, new LordJob_AssaultShip(invaderFac, false), map);
 							else
 								mapComp.InvaderLord = LordMaker.MakeNewLord(invaderFac, new LordJob_DefendShip(invaderFac, map.Center), map);
-							Log.Message("Spawned invaders from: " + invaderFac);
+							Log.Message("SOS2: ".Colorize(Color.cyan) + map + "Spawned invaders from: " + invaderFac);
 						}
 						else
 							invaderFac = mapComp.InvaderLord.faction;
@@ -1281,10 +1292,10 @@ namespace SaveOurShip2
 				if ((wreckLevel == 2 && Rand.Chance(0.6f)) || (wreckLevel == 3 && Rand.Chance(0.3f) && invaderFac != null))
 				{
 					IncidentParms parms = new IncidentParms();
-					var check = (MapParent)Find.WorldObjects.AllWorldObjects.Where(ob => ob.def == ResourceBank.WorldObjectDefOf.ShipOrbiting).FirstOrDefault();
+					Map check = FindPlayerShipMap();
 					if (check != null)
 					{
-						parms.target = check.Map;
+						parms.target = check;
 						parms.forced = true;
 						if (invaderFac != null && Rand.Chance(0.8f)) //most likely invading ship
 							parms.faction = invaderFac;
@@ -1300,6 +1311,22 @@ namespace SaveOurShip2
 			}
 			//SL SpawnLights(map, spawnLights);
         }
+        private static void SoShipPawnGen(Pawn p) //td make proper pawngen req?
+        {
+            if (p.RaceProps.IsMechanoid)
+            {
+                p.SetFactionDirect(Faction.OfMechanoids);
+                p.ageTracker.AgeBiologicalTicks = (long)(Rand.Range(200f, 2500f) * 3600000f);
+                p.ageTracker.AgeChronologicalTicks = p.ageTracker.AgeBiologicalTicks;
+            }
+            else
+            {
+                if (p.RaceProps.BloodDef.defName.Equals("Filth_BloodInsect"))
+                    p.SetFactionDirect(Faction.OfInsects);
+                p.ageTracker.AgeBiologicalTicks = 36000000;
+                p.ageTracker.AgeChronologicalTicks = 36000000;
+            }
+        }
         public static void SpawnLights(Map map, Dictionary<IntVec3, Tuple<int, ColorInt, bool>> shape)
         {
             //Dictionary<IntVec3, Color> spawnLights
@@ -1309,7 +1336,7 @@ namespace SaveOurShip2
                 Building edifice = position.GetEdifice(map);
                 if (edifice != null)
                 {
-                    CompSoShipPart part = edifice.TryGetComp<CompSoShipPart>();
+                    CompSoShipLight part = edifice.TryGetComp<CompSoShipLight>();
                     if (part != null)
                     {
                         part.SpawnLight(shape[position].Item1, shape[position].Item2, shape[position].Item3);
@@ -1367,7 +1394,7 @@ namespace SaveOurShip2
 			{
 				if (t.GetRoom() == null || ExposedToOutside(t.GetRoom()))
 					continue;
-				ThingDef def = Rand.Element(ThingDef.Named("Plant_Rice"), ThingDef.Named("Plant_Potato"), ThingDef.Named("Plant_Strawberry"));
+				ThingDef def = Rand.Element(ThingDef.Named("Plant_Rice"), ThingDefOf.Plant_Potato, ThingDef.Named("Plant_Strawberry"));
 				//randomPlants.Where(d => d.plant.sowTags.Contains("Hydroponic") && !d.plant.cavePlant && d.plant.sowResearchPrerequisites == null).RandomElement();
 				if (def != null)
 				{
@@ -1379,25 +1406,12 @@ namespace SaveOurShip2
 						plant.SpawnSetup(map, false);
 					}
 				}
-
 			}
 			map.mapDrawer.MapMeshDirty(map.Center, MapMeshFlag.Things | MapMeshFlag.FogOfWar);
 			if (Current.ProgramState == ProgramState.Playing)
 				map.mapDrawer.RegenerateEverythingNow();
-            //SC map.GetComponent<ShipHeatMapComp>().RecacheMap();
-		}
-		public static bool AnyBridgeIn(Room room)
-		{
-			List<Region> regions = room.Regions;
-			for (int i = 0; i < regions.Count; i++)
-			{
-				if (regions[i].ListerThings.AllThings.Any(t => t is Building_ShipBridge))
-				{
-					return true;
-				}
-			}
-			return false;
-		}
+            map.GetComponent<ShipHeatMapComp>().RecacheMap();
+        }
 		public static List<IntVec3> FindCellOnOuterHull(Map map, int max, CellRect shipArea)
 		{
 			//targets outer cells
@@ -1417,7 +1431,7 @@ namespace SaveOurShip2
 			}
 			return targetCells;
 		}
-		public static void MakeLines(EnemyShipDef shipDef, Map map, int wreckLevel, IntVec3 offset)
+		public static void MakeLines(EnemyShipDef shipDef, Map map, Faction fac, int wreckLevel, IntVec3 offset)
 		{
 			List<IntVec3> detVecs = new List<IntVec3>();
 			IntVec3 from = new IntVec3(Rand.RangeInclusive(offset.x + 10, offset.x + shipDef.sizeX - 10), 0, offset.z);
@@ -1432,13 +1446,13 @@ namespace SaveOurShip2
 				if (Rand.Chance(0.05f))
 					break;
 			}
-			MakeHoles(detVecs, map, wreckLevel, 2.9f, 3.9f);
+			MakeHoles(detVecs, map, fac, wreckLevel, 2.9f, 3.9f);
 		}
-		public static void MakeHoles(List<IntVec3> targets, Map map, int wreckLevel, float minSize, float maxSize)
+		public static void MakeHoles(List<IntVec3> targets, Map map, Faction fac, int wreckLevel, float minSize, float maxSize)
 		{
 			if (targets.NullOrEmpty())
 				return;
-			List<Thing> toDestroy = new List<Thing>();
+            List<Thing> toDestroy = new List<Thing>();
 			List<Building> toReplace = new List<Building>();
             HashSet<IntVec3> area = new HashSet<IntVec3>();
             foreach (IntVec3 v in targets)
@@ -1453,6 +1467,10 @@ namespace SaveOurShip2
 					foreach (Thing t in vec.GetThingList(map).Where(t => !t.Destroyed))
 					{
                         toDestroySet.Add(t);
+						if (t is Building b && b.def.building.shipPart)
+						{
+							areaSet.AddRange(b.OccupiedRect());
+                        }
 					}
 				}
 				foreach (IntVec3 vec in GenRadial.RadialCellsAround(v, exploRadius, exploRadius + 1))
@@ -1479,12 +1497,15 @@ namespace SaveOurShip2
 			foreach (IntVec3 v in area)
             {
                 map.roofGrid.SetRoof(v, null);
+				map.GetComponent<ShipHeatMapComp>().MapShipCells.Remove(v);
             }
 			foreach (Building b in toReplace)
 			{
 				IntVec3 v = b.Position;
 				Thing thing = ThingMaker.MakeThing(wreckDictionary[b.def]);
-				if (!b.Destroyed)
+				if (thing.def.CanHaveFaction && fac == Faction.OfPlayer)
+					thing.SetFactionDirect(fac);
+                if (!b.Destroyed)
 					b.Destroy();
 				GenSpawn.Spawn(thing, v, map);
 			}
@@ -1505,25 +1526,6 @@ namespace SaveOurShip2
 				}
 			}
 			//secondaries?
-		}
-		private static void GenerateHull(List<IntVec3> border, List<IntVec3> interior, Faction fac, Map map)
-		{
-			foreach (IntVec3 vec in border)
-			{
-				if (!GenSpawn.WouldWipeAnythingWith(vec, Rot4.South, ResourceBank.ThingDefOf.Ship_Beam, map, (Thing x) => x.def.category == ThingCategory.Building) && !vec.GetThingList(map).Where(t => t.TryGetComp<CompSoShipPart>()?.Props.isPlating ?? false).Any())
-				{
-					Thing wall = ThingMaker.MakeThing(ResourceBank.ThingDefOf.Ship_Beam);
-					wall.SetFaction(fac);
-					GenSpawn.Spawn(wall, vec, map);
-				}
-			}
-			foreach (IntVec3 vec in interior)
-			{
-				Thing floor = ThingMaker.MakeThing(ResourceBank.ThingDefOf.ShipHullTile);
-				if (fac == Faction.OfPlayer)
-					floor.SetFaction(fac);
-				GenSpawn.Spawn(floor, vec, map);
-			}
 		}
 		public static void RectangleUtility(int xCorner, int zCorner, int x, int z, ref List<IntVec3> border,
 			ref List<IntVec3> interior)
@@ -1592,94 +1594,6 @@ namespace SaveOurShip2
 			border.Add(new IntVec3(pos.z, 0, pos.x * -1));
 			border.Add(new IntVec3(pos.z * -1, 0, pos.x * -1));
 		}
-		public static List<Building> FindBuildingsAttached(Building root, bool includeRock = false)
-		{
-			if (root == null || root.Destroyed)
-				return new List<Building>();
-
-			var map = root.Map;
-			var containedBuildings = new HashSet<Building>();
-			var cellsTodo = new HashSet<IntVec3>();
-			var cellsDone = new HashSet<IntVec3>();
-			cellsTodo.AddRange(GenAdj.CellsOccupiedBy(root));
-			cellsTodo.AddRange(GenAdj.CellsAdjacentCardinal(root));
-			while (cellsTodo.Count > 0)
-			{
-				var current = cellsTodo.First();
-				cellsTodo.Remove(current);
-				cellsDone.Add(current);
-				var containedThings = current.GetThingList(map);
-				if (containedThings.Any(t => t is Building b && (b.def.building.shipPart || (includeRock && b.def.building.isNaturalRock))))
-				{
-					foreach (var t in containedThings)
-					{
-						if (t is Building b)
-						{
-							containedBuildings.Add(b);
-							if (b.def.building.shipPart)
-								cellsTodo.AddRange(GenAdj.CellsOccupiedBy(b).Concat(GenAdj.CellsAdjacentCardinal(b)).Where(v => !cellsDone.Contains(v)));
-						}
-					}
-				}
-			}
-			return containedBuildings.ToList();
-		}
-		public static HashSet<IntVec3> FindAreaAttached(Building root, bool includeRock = false)
-		{
-			if (root == null || root.Destroyed)
-				return new HashSet<IntVec3>();
-
-			var map = root.Map;
-			var cellsTodo = new HashSet<IntVec3>();
-			var cellsDone = new HashSet<IntVec3>();
-			var cellsFound = new HashSet<IntVec3>();
-			cellsTodo.AddRange(GenAdj.CellsOccupiedBy(root));
-			cellsTodo.AddRange(GenAdj.CellsAdjacentCardinal(root));
-			while (cellsTodo.Count > 0)
-			{
-				var current = cellsTodo.First();
-				cellsTodo.Remove(current);
-				cellsDone.Add(current);
-				if (current.GetThingList(map).Any(t => t is Building b && (b.def.building.shipPart || (includeRock && b.def.building.isNaturalRock))) || (includeRock && IsRock(current.GetTerrain(map))))
-				{
-					cellsFound.Add(current);
-					cellsTodo.AddRange(GenAdj.CellsAdjacentCardinal(current, Rot4.North, new IntVec2(1, 1)).Where(v => !cellsDone.Contains(v)));
-				}
-			}
-			return cellsFound;
-		}
-		/*SC public static HashSet<IntVec3> FindAreaAttachedNew(Building root, bool includeRock = false)
-		{
-			var cells = root.Map.GetComponent<ShipHeatMapComp>().ShipCells;
-			return cells.Keys.Where(v => cells[v].Item1 == cells[root.Position].Item1).ToHashSet();
-		}*/
-		public class TimeHelper
-		{
-			private System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
-			public struct TimeMeasure
-			{
-				public string name;
-				public TimeSpan time;
-			}
-
-			public List<TimeMeasure> measures = new List<TimeMeasure>();
-
-			public void Record(string name)
-			{
-				measures.Add(new TimeMeasure { name = name, time = watch.Elapsed });
-				watch.Restart();
-			}
-
-			public string MakeReport()
-			{
-				var sb = new StringBuilder();
-				foreach (var r in measures)
-				{
-					sb.AppendFormat("{0}={1}ms\n", r.name, r.time.TotalMilliseconds);
-				}
-				return sb.ToString();
-			}
-		}
 		public static bool IsRock(TerrainDef def)
 		{
 			return rockTerrains.Contains(def);
@@ -1688,100 +1602,14 @@ namespace SaveOurShip2
 		{
 			return def == ResourceBank.TerrainDefOf.FakeFloorInsideShip || def == ResourceBank.TerrainDefOf.FakeFloorInsideShipMech || def == ResourceBank.TerrainDefOf.FakeFloorInsideShipArchotech;
 		}
-		public static Sketch GenerateShipSketch(HashSet<IntVec3> positions, Map map, IntVec3 lowestCorner, byte rotb = 0)
+		//td change or make new for call on ship direct
+        public static void MoveShip(Building core, Map targetMap, IntVec3 adjustment, Faction fac = null, byte rotNum = 0, bool includeRock = false)
 		{
-			Sketch sketch = new Sketch();
-			IntVec3 rot = new IntVec3(0, 0, 0);
-			foreach (IntVec3 pos in positions)
-			{
-				if (rotb == 1)
-				{
-					rot.x = map.Size.x - pos.z;
-					rot.z = pos.x;
-					sketch.AddThing(ThingDef.Named("Ship_FakeBeam"), rot - lowestCorner, Rot4.North);
-				}
-				else if (rotb == 2)
-				{
-					rot.x = map.Size.x - pos.x;
-					rot.z = map.Size.z - pos.z;
-					sketch.AddThing(ThingDef.Named("Ship_FakeBeam"), rot - lowestCorner, Rot4.North);
-				}
-				else
-					sketch.AddThing(ThingDef.Named("Ship_FakeBeam"), pos - lowestCorner, Rot4.North);
+			if (core.DestroyedOrNull())
+            {
+                Log.Warning("SOS2: ".Colorize(Color.cyan) + "Ship move to map: ".Colorize(Color.red) + targetMap + " failed, target destroyed!".Colorize(Color.red));
+                return;
 			}
-			return sketch;
-		}
-		public static void MoveShipSketch(Building b, Map targetMap, byte rotb = 0, bool salvage = false, int bMax = 0, bool includeRock = false)
-		{
-			if (b == null)
-				return;
-			List<Building> cachedParts;
-			if (b is Building_ShipBridge bridge)
-				cachedParts = bridge.cachedShipParts; //SC cachedParts = bridge.Ship.Buildings.ToList();
-			else
-				cachedParts = FindBuildingsAttached(b, includeRock);
-
-			IntVec3 lowestCorner = new IntVec3(int.MaxValue, 0, int.MaxValue);
-			HashSet<IntVec3> positions = new HashSet<IntVec3>();
-			int bCount = 0;
-			foreach (Building building in cachedParts)
-			{
-				if (salvage && building is Building_ShipBridge br && !br.TacCon && !building.Destroyed)
-				{
-					Messages.Message(TranslatorFormattedStringExtensions.Translate("ShipSalvageBridge"), MessageTypeDefOf.NeutralEvent);
-					cachedParts.Clear();
-					positions.Clear();
-					return;
-				}
-				bCount++;
-				if (b.Position.x < lowestCorner.x)
-					lowestCorner.x = b.Position.x;
-				if (b.Position.z < lowestCorner.z)
-					lowestCorner.z = b.Position.z;
-				foreach (IntVec3 pos in GenAdj.CellsOccupiedBy(building))
-					positions.Add(pos);
-			}
-			if (rotb == 1)
-			{
-				lowestCorner.x = b.Map.Size.z - lowestCorner.z;
-				lowestCorner.z = lowestCorner.x;
-			}
-			else if (rotb == 2)
-			{
-				lowestCorner.x = b.Map.Size.x - lowestCorner.x;
-				lowestCorner.z = b.Map.Size.z - lowestCorner.z;
-			}
-			float bCountF = bCount * 2.5f;
-			if (salvage && bCountF > bMax)
-			{
-				Messages.Message(TranslatorFormattedStringExtensions.Translate("ShipSalvageCount", (int)bCountF, bMax), MessageTypeDefOf.NeutralEvent);
-				cachedParts.Clear();
-				positions.Clear();
-				return;
-			}
-			Sketch shipSketch = GenerateShipSketch(positions, targetMap, lowestCorner, rotb);
-			MinifiedThingShipMove fakeMover = (MinifiedThingShipMove)new ShipMoveBlueprint(shipSketch).TryMakeMinified();
-			fakeMover.shipRoot = b;
-			fakeMover.includeRock = includeRock;
-			fakeMover.shipRotNum = rotb;
-			fakeMover.bottomLeftPos = lowestCorner;
-			shipOriginMap = b.Map;
-			fakeMover.targetMap = targetMap;
-			fakeMover.Position = b.Position;
-			fakeMover.SpawnSetup(targetMap, false);
-			List<object> selected = new List<object>();
-			foreach (object ob in Find.Selector.SelectedObjects)
-				selected.Add(ob);
-			foreach (object ob in selected)
-				Find.Selector.Deselect(ob);
-			Current.Game.CurrentMap = targetMap;
-			Find.Selector.Select(fakeMover);
-			if (Find.TickManager.Paused)
-				Find.TickManager.TogglePaused();
-			InstallationDesignatorDatabase.DesignatorFor(ThingDef.Named("ShipMoveBlueprint")).ProcessInput(null);
-		}
-		public static void MoveShip(Building core, Map targetMap, IntVec3 adjustment, Faction fac = null, byte rotNum = 0, bool includeRock = false)
-		{
 			bool devMode = false;
 			var watch = new TimeHelper();
 			if (Prefs.DevMode)
@@ -1790,7 +1618,6 @@ namespace SaveOurShip2
 			}
 			HashSet<Thing> toSave = new HashSet<Thing>();
 			List<Thing> toDestroy = new List<Thing>();
-			List<CompPower> toRePower = new List<CompPower>();
 			List<Zone> zonesToCopy = new List<Zone>();
 			List<Room> roomsToTemp = new List<Room>();
 			List<Tuple<IntVec3, float>> posTemp = new List<Tuple<IntVec3, float>>();
@@ -1798,7 +1625,8 @@ namespace SaveOurShip2
 			List<Tuple<IntVec3, RoofDef>> roofToCopy = new List<Tuple<IntVec3, RoofDef>>();
 			List<IntVec3> fireExplosions = new List<IntVec3>();
 			List<CompEngineTrail> nukeExplosions = new List<CompEngineTrail>();
-			IntVec3 rot = IntVec3.Zero;
+            List<Pawn> pawns = new List<Pawn>();
+            IntVec3 rot = IntVec3.Zero;
 			int rotb = 4 - rotNum;
 
 			// Transforms vector from initial position to final according to desired movement/rotation.
@@ -1812,52 +1640,71 @@ namespace SaveOurShip2
 			if (devMode)
 				watch.Record("prepare");
 
-			/*SC shipOriginMap = null;
+            AirlockBugFlag = true;
+            shipOriginMap = null;
 			bool playerMove = core.Faction == Faction.OfPlayer;
 			Map sourceMap = core.Map;
 			bool sourceMapIsSpace = sourceMap.IsSpace();
             var sourceMapComp = sourceMap.GetComponent<ShipHeatMapComp>();
-            sourceMapComp.CacheOff = true;
-            int shipIndex = sourceMapComp.ShipCells[core.Position].Item1;
+			int shipIndex = sourceMapComp.ShipIndexOnVec(core.Position);
+			if (shipIndex == -1)
+            {
+                Log.Error("SOS2: ".Colorize(Color.cyan) + sourceMap + " Ship move to map: ".Colorize(Color.red) + targetMap + " failed, no valid ship index found! Save, reload and report!".Colorize(Color.red));
+                return;
+            }
             HashSet<int> shipIndexes = new HashSet<int> { shipIndex };
             var ship = sourceMapComp.ShipsOnMapNew[shipIndex];
-			HashSet<IntVec3> sourceArea = ship.Area;
-			
+			HashSet<IntVec3> sourceArea = new HashSet<IntVec3>(ship.Area);
+			if (sourceMapComp.Docked.Any()) //undock all
+			{
+				sourceMapComp.UndockAllFrom(shipIndex);
+            }
+
             if (targetMap == null)
                 targetMap = core.Map;
 			bool targetMapIsSpace = targetMap.IsSpace();
             var targetMapComp = targetMap.GetComponent<ShipHeatMapComp>();
-            targetMapComp.CacheOff = true;
             HashSet<IntVec3> targetArea = new HashSet<IntVec3>();
 
             if (targetMap != sourceMap) //ship cache: if moving to different map, move cache
             {
-                Log.Message("Moving ship cache " + shipIndex + " to map: " + targetMap);
+                Log.Message("SOS2: ".Colorize(Color.cyan) + sourceMap + " Ship ".Colorize(Color.green) + shipIndex + " MoveShip to map: " + targetMap);
+				if (targetMapComp.ShipsOnMapNew.ContainsKey(shipIndex))
+                {
+                    Log.Error("SOS2: ".Colorize(Color.cyan) + " Ship ".Colorize(Color.green) + shipIndex + " MoveShip abort, already on map: " + targetMap);
+                    return;
+				}
                 targetMapComp.ShipsOnMapNew.Add(shipIndex, sourceMapComp.ShipsOnMapNew[shipIndex]);
                 ship = targetMapComp.ShipsOnMapNew[shipIndex];
-                ship.map = targetMap;
-                ship.mapComp = targetMapComp;
-                sourceMapComp.ShipsOnMapNew.Remove(shipIndex);
-            }*/
-			//SC rem
-			shipOriginMap = null;
-			bool playerMove = core.Faction == Faction.OfPlayer;
-			Map sourceMap = core.Map;
-			bool sourceMapIsSpace = sourceMap.IsSpace();
-			HashSet<IntVec3> sourceArea = FindAreaAttached(core, includeRock);
-			
-            if (targetMap == null)
-                targetMap = core.Map;
-			bool targetMapIsSpace = targetMap.IsSpace();
-			HashSet<IntVec3> targetArea = new HashSet<IntVec3>();
-			//SC rem end
+                ship.Map = targetMap;
+                if (adjustment != IntVec3.Zero && ship.BuildingsDestroyed.Any()) //cache: adjust destroyed
+                {
+                    HashSet<Tuple<BuildableDef, IntVec3, Rot4>> buildingsDestroyed = new HashSet<Tuple<BuildableDef, IntVec3, Rot4>>(ship.BuildingsDestroyed);
+                    ship.BuildingsDestroyed.Clear();
+                    foreach (var sh in buildingsDestroyed)
+                    {
+                        ship.BuildingsDestroyed.Add(new Tuple<BuildableDef, IntVec3, Rot4>(sh.Item1, Transform(sh.Item2), sh.Item3));
+                    }
+                    buildingsDestroyed.Clear();
+                }
+                sourceMapComp.RemoveShipFromCache(shipIndex);
+            }
+            if (adjustment != IntVec3.Zero) //cache: adjust area
+            {
+                ship.Area.Clear();
+                foreach (IntVec3 pos in sourceArea)
+                {
+                    ship.Area.Add(Transform(pos));
+                }
+            }
+            //Log.Message("Area: " + ship.Area.Count);
 
-			foreach (IntVec3 pos in sourceArea)
+            foreach (IntVec3 pos in sourceArea)
 			{
 				IntVec3 adjustedPos = Transform(pos);
-                /*SC //ship cache: move ShipCells
-                targetMapComp.ShipCells.Add(adjustedPos, new Tuple<int, int>(sourceMapComp.ShipCells[pos].Item1, sourceMapComp.ShipCells[pos].Item2));
-                sourceMapComp.ShipCells.Remove(pos);*/
+                //ship cache: move ShipCells
+                targetMapComp.MapShipCells.Add(adjustedPos, new Tuple<int, int>(sourceMapComp.MapShipCells[pos].Item1, sourceMapComp.MapShipCells[pos].Item2));
+                sourceMapComp.MapShipCells.Remove(pos);
 				//store room temps
 				Room room = pos.GetRoom(sourceMap);
 				if (room != null && !roomsToTemp.Contains(room) && !ExposedToOutside(room))
@@ -1866,18 +1713,17 @@ namespace SaveOurShip2
 					float temp = room.Temperature;
 					posTemp.Add(new Tuple<IntVec3, float>(adjustedPos, temp));
 				}
-				//add to target areas
+				//add to target area and ship
 				targetArea.Add(adjustedPos);
 				//clear LZ
 				foreach (Thing t in adjustedPos.GetThingList(targetMap))
 				{
-					if (!toDestroy.Contains(t))
+					if (!toDestroy.Contains(t) && !(t is Building_SteamGeyser))
 						toDestroy.Add(t);
 				}
 				if (!targetMapIsSpace)
 					targetMap.snowGrid.SetDepth(adjustedPos, 0f);
 				//add all things from area
-				List<Pawn> pawns = new List<Pawn>();
 				foreach (Thing t in pos.GetThingList(sourceMap))
 				{
 					if (t is Building b)
@@ -1905,7 +1751,7 @@ namespace SaveOurShip2
                         if (!sourceMapIsSpace && p.Faction != Faction.OfPlayer && !p.IsPrisoner)
                         {
                             //do not allow kidnapping other fac pawns/animals
-                            Messages.Message(TranslatorFormattedStringExtensions.Translate("ShipLaunchFailPawns"), null, MessageTypeDefOf.NegativeEvent);
+                            Messages.Message(TranslatorFormattedStringExtensions.Translate("ShipLaunchFailPawns", p.Name.ToStringShort), null, MessageTypeDefOf.NegativeEvent);
                             return;
                         }
                         /*else if (p.Faction == Faction.OfPlayer && p.holdingOwner is Building) //pawns in containers, abort
@@ -1919,9 +1765,8 @@ namespace SaveOurShip2
                 }
                 foreach (Pawn p in pawns) //drop carried things, add to move list
                 {
-					if (p.IsCarrying())
+					if (p.IsCarrying() && p.carryTracker.TryDropCarriedThing(p.Position, ThingPlaceMode.Direct, out Thing carriedt))
                     {
-                        p.carryTracker.TryDropCarriedThing(p.Position, ThingPlaceMode.Direct, out Thing carriedt);
                         toSave.Add(carriedt);
                     }
 					//p.CurJob.Clear();
@@ -1963,18 +1808,17 @@ namespace SaveOurShip2
                     targetMap.terrainGrid.RemoveTopLayer(pos, false);
                 }
             }
-            /*SC if (adjustment != IntVec3.Zero) //ship cache: offset area, find adjacent ships
+            if (adjustment != IntVec3.Zero) //ship cache: offset area, find adjacent ships
             {
                 ship.Area = targetArea;
                 foreach (IntVec3 pos in targetArea)
                 {
-                    foreach (IntVec3 vec in GenAdj.CellsAdjacentCardinal(pos, Rot4.North, new IntVec2(1, 1)).Where(v => !targetArea.Contains(v) && targetMapComp.ShipCells.ContainsKey(v)))
+                    foreach (IntVec3 vec in GenAdj.CellsAdjacentCardinal(pos, Rot4.North, new IntVec2(1, 1)).Where(v => !targetArea.Contains(v) && targetMapComp.MapShipCells.ContainsKey(v)))
                     {
-                        shipIndexes.Add(targetMapComp.ShipCells[vec].Item1);
+                        shipIndexes.Add(targetMapComp.MapShipCells[vec].Item1);
                     }
                 }
-                Log.Message("Area: " + shipIndexes.Count);
-            }*/
+            }
             if (devMode)
 				watch.Record("processSourceArea");
 
@@ -1993,65 +1837,53 @@ namespace SaveOurShip2
 			if (devMode)
 				watch.Record("destroySource");
 
-			//takeoff - draw fuel
+			//move map - draw fuel
 			if (core is Building_ShipBridge && playerMove)
 			{
-				float fuelNeeded = 0f;
+				float fuelNeeded = ship.MassActual;
 				float fuelStored = 0f;
-				List<CompRefuelable> refuelComps = new List<CompRefuelable>();
-
-				foreach (Thing saveThing in toSave)
-				{
-					if (saveThing is Building)
-					{
-						if (saveThing.TryGetComp<CompSoShipPart>()?.Props.isPlating ?? false)
-							fuelNeeded += 1f;
-						else
-						{
-							var engineComp = saveThing.TryGetComp<CompEngineTrail>();
-							if (engineComp != null && engineComp.Props.takeOff)
-							{
-								if (saveThing.Rotation.AsByte == 0)
-									fireExplosions.Add(saveThing.Position + new IntVec3(0, 0, -3));
-								else if (saveThing.Rotation.AsByte == 1)
-									fireExplosions.Add(saveThing.Position + new IntVec3(-3, 0, 0));
-								else if (saveThing.Rotation.AsByte == 2)
-									fireExplosions.Add(saveThing.Position + new IntVec3(0, 0, 3));
-								else
-									fireExplosions.Add(saveThing.Position + new IntVec3(3, 0, 0));
-								refuelComps.Add(engineComp.refuelComp);
-								fuelStored += engineComp.refuelComp.Fuel;
-								if (engineComp.refuelComp.Props.fuelFilter.AllowedThingDefs.Contains(ThingDef.Named("ShuttleFuelPods")))
-								{
-									fuelStored += engineComp.refuelComp.Fuel;
-									if (ModsConfig.BiotechActive && !sourceMapIsSpace)
-									{
-										foreach (IntVec3 v in engineComp.ExhaustArea)
-											v.Pollute(sourceMap, true);
-									}
-								}
-							}
-							fuelNeeded += (saveThing.def.size.x * saveThing.def.size.z) * 3f;
-						}
-					}
-				}
+				List<CompEngineTrail> engines = new List<CompEngineTrail>();
+				foreach (CompEngineTrail engine in ship.Engines.Where(e => e.flickComp.SwitchIsOn && !e.Props.energy && !e.Props.reactionless && e.refuelComp.Fuel > 0 && (!targetMapIsSpace || e.Props.takeOff)))
+                {
+                    fuelStored += engine.refuelComp.Fuel;
+                    if (engine.PodFueled)
+                    {
+                        fuelStored += engine.refuelComp.Fuel;
+                        if (ModsConfig.BiotechActive && !sourceMapIsSpace)
+                        {
+                            foreach (IntVec3 v in engine.ExhaustArea)
+                                v.Pollute(sourceMap, true);
+                        }
+                    }
+                    engines.Add(engine);
+                }
 				if (sourceMapIsSpace)
                 {
-                    if (targetMap.IsSpace()) //space map 1%
+                    if (targetMapIsSpace) //space map 1%
                         fuelNeeded *= 0.01f;
                     else //to ground 10%
                         fuelNeeded *= 0.1f;
                 }
-				foreach (CompRefuelable engine in refuelComps)
-				{
-					engine.ConsumeFuel(fuelNeeded * engine.Fuel / fuelStored);
-				}
+				foreach (CompEngineTrail engine in engines)
+                {
+                    engine.refuelComp.ConsumeFuel(fuelNeeded * engine.refuelComp.Fuel / fuelStored);
+                    if (targetMapIsSpace)
+                    {
+                        if (engine.parent.Rotation.AsByte == 0)
+                            fireExplosions.Add(engine.parent.Position + new IntVec3(0, 0, -3));
+                        else if (engine.parent.Rotation.AsByte == 1)
+                            fireExplosions.Add(engine.parent.Position + new IntVec3(-3, 0, 0));
+                        else if (engine.parent.Rotation.AsByte == 2)
+                            fireExplosions.Add(engine.parent.Position + new IntVec3(0, 0, 3));
+                        else
+                            fireExplosions.Add(engine.parent.Position + new IntVec3(3, 0, 0));
+                    }
+                }
 				if (devMode)
 					watch.Record("takeoffEngineEffects");
 			}
 
 			//move things
-			AirlockBugFlag = true;
 			foreach (Thing spawnThing in toSave)
 			{
 				if (!spawnThing.Destroyed)
@@ -2103,7 +1935,7 @@ namespace SaveOurShip2
 							spawnThing.Position += adjustment;
 						try
 						{
-							if (!spawnThing.Destroyed && spawnThing.TryGetComp<CompShipLight>()==null)
+							if (!spawnThing.Destroyed && spawnThing.TryGetComp<CompShipLight>() == null)
 							{
 								spawnThing.SpawnSetup(targetMap, false);
 							}
@@ -2120,10 +1952,6 @@ namespace SaveOurShip2
 						//post move
 						if (fac != null && spawnThing is Building && spawnThing.def.CanHaveFaction)
 							spawnThing.SetFaction(fac);
-						if (spawnThing is Pawn pawn)
-						{
-							Find.World.GetComponent<PastWorldUWO2>().PawnsInSpaceCache.Remove(pawn.thingIDNumber);
-						}
 					}
 					catch (Exception e)
 					{
@@ -2138,13 +1966,11 @@ namespace SaveOurShip2
 			if (devMode)
 				watch.Record("moveThings");
 			AirlockBugFlag = false;
-			/*SC sourceMapComp.CacheOff = false;
-            targetMapComp.CacheOff = false;
 			if (shipIndexes.Count > 1) //ship cache: adjacent ships found, merge in order: largest ship, ship, wreck
             {
-                Log.Message("ŞOS2: ship move found adjacent ships, merging");
+                Log.Message("SOS2: ".Colorize(Color.cyan) + " ship move found adjacent ships in area, merging!");
                 targetMapComp.CheckAndMerge(shipIndexes);
-            }*/
+            }
             //move zones
             if (zonesToCopy.Any())
 			{
@@ -2201,21 +2027,28 @@ namespace SaveOurShip2
 				watch.Record("moveZones");
 
 			//move terrain
-			foreach (Tuple<IntVec3, TerrainDef> tup in terrainToCopy)
-			{
-				var targetTile = targetMap.terrainGrid.TerrainAt(tup.Item1);
-				if (!targetTile.layerable || IsHull(targetTile))
-				{
-					targetMap.terrainGrid.SetTerrain(tup.Item1, tup.Item2);
-				}
-			}
-			if (includeRock)
-			{
-				foreach (IntVec3 pos in sourceArea)
-				{
-					sourceMap.terrainGrid.SetTerrain(pos, ResourceBank.TerrainDefOf.EmptySpace);
-				}
-			}
+			try
+            {
+                foreach (Tuple<IntVec3, TerrainDef> tup in terrainToCopy)
+                {
+                    var targetTile = targetMap.terrainGrid.TerrainAt(tup.Item1);
+                    if (!targetTile.layerable || IsHull(targetTile))
+                    {
+                        targetMap.terrainGrid.SetTerrain(tup.Item1, tup.Item2);
+                    }
+                }
+                if (includeRock)
+                {
+                    foreach (IntVec3 pos in sourceArea)
+                    {
+                        sourceMap.terrainGrid.SetTerrain(pos, ResourceBank.TerrainDefOf.EmptySpace);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Warning("" + e);
+            }
 			if (devMode)
 				watch.Record("moveTerrain");
 
@@ -2227,15 +2060,15 @@ namespace SaveOurShip2
 			if (devMode)
 				watch.Record("moveRoof");
 
-			//restore temp in ship
-			foreach (Tuple<IntVec3, float> t in posTemp)
+            //restore temp in ship
+            foreach (Tuple<IntVec3, float> t in posTemp)
 			{
 				Room room = t.Item1.GetRoom(targetMap);
 				room.Temperature = t.Item2;
 			}
 
-			//landing - remove space map
-			if (!targetMapIsSpace && !sourceMap.spawnedThings.Any((Thing x) => x is Pawn && !x.Destroyed))
+			//landing - remove space map if no pawns or cores
+			if (!targetMapIsSpace && !sourceMap.spawnedThings.Any((Thing t) => (t is Pawn || (t is Building_ShipBridge b && b.mannableComp == null)) && !t.Destroyed))
 			{
 				WorldObject oldParent = sourceMap.Parent;
 				Current.Game.DeinitAndRemoveMap_NewTemp(sourceMap, false);
@@ -2251,12 +2084,19 @@ namespace SaveOurShip2
 				}
 			}
 
-            //power
-            if (sourceMap != targetMap)
-            {
+			if (sourceMap != targetMap)
+			{
+				//pawns to lord
+				foreach (Pawn p in pawns)
+					AddPawnToLord(targetMap, p);
+
+                //power
+                ship.ForceRePower = 2;
                 sourceMap.powerNetManager.UpdatePowerNetsAndConnections_First();
                 targetMap.powerNetManager.UpdatePowerNetsAndConnections_First();
             }
+			else
+				ship.ForceRePower = 1;
 
             //heat
             targetMap.GetComponent<ShipHeatMapComp>().heatGridDirty = true;
@@ -2264,15 +2104,52 @@ namespace SaveOurShip2
 			if (devMode)
 			{
 				watch.Record("finalize");
-				Log.Message("Timing report:\n" + watch.MakeReport());
-				Log.Message("Moved ship with building " + core);
-			}
-		}
-		public static void SaveShip(Building core, string file)
+                Log.Message("SOS2: ".Colorize(Color.cyan) + sourceMap + " Ship ".Colorize(Color.green) + shipIndex + " Moved ship with: " + core + "\n" + watch.MakeReport());
+
+            }
+        }
+        public static void AddPawnToLord(Map map, Pawn p)
+        {
+			if (!p.HostileTo(Faction.OfPlayer) || p.Dead)
+                return;
+
+			p.GetLord()?.RemovePawn(p);
+            var mapComp = map.GetComponent<ShipHeatMapComp>();
+            if (map == FindPlayerShipMap()) //if placed on player home, assault it
+            {
+                if (mapComp.InvaderLord == null)
+                {
+                    mapComp.InvaderLord = LordMaker.MakeNewLord(p.Faction, new LordJob_AssaultShip(p.Faction), map);
+                }
+                if (p.Faction == mapComp.InvaderLord.faction)
+                {
+                    mapComp.InvaderLord.AddPawn(p);
+					return;
+                }
+            }
+			//other faction or on wreck map
+            if (mapComp.ShipLord == null)
+            {
+                mapComp.ShipLord = LordMaker.MakeNewLord(p.Faction, new LordJob_DefendShip(p.Faction, map.Center), map);
+            }
+            if (p.Faction == mapComp.ShipLord.faction)
+            {
+                mapComp.ShipLord.AddPawn(p);
+                return;
+            }
+			//fallback
+            Lord lord = LordMaker.MakeNewLord(p.Faction, new LordJob_DefendShip(p.Faction, map.Center), map);
+            lord.AddPawn(p);
+        }
+        public static void SaveShip(Building_ShipBridge core, string file)
 		{
 			List<Thing> toSave = new List<Thing>();
 			List<Zone> zones = new List<Zone>();
-			HashSet<IntVec3> area = FindAreaAttached(core, false);
+
+            Map map = core.Map;
+            var mapComp = map.GetComponent<ShipHeatMapComp>();
+            var ship = mapComp.ShipsOnMapNew[core.ShipIndex];
+            HashSet<IntVec3> area = ship.Area;
 
 			HashSet<Ideo> ideosAboardShip = new HashSet<Ideo>();
 			HashSet<CustomXenotype> xenosAboardShip = new HashSet<CustomXenotype>();
@@ -2281,7 +2158,6 @@ namespace SaveOurShip2
 			List<RoofDef> roofDefs = new List<RoofDef>();
 			List<IntVec3> terrainPos = new List<IntVec3>();
 			List<TerrainDef> terrainDefs = new List<TerrainDef>();
-			Map map = core.Map;
 
 			foreach (IntVec3 pos in area)
 			{
@@ -2301,19 +2177,18 @@ namespace SaveOurShip2
 							a.DeSpawnDock();
 						}
 						var engineComp = t.TryGetComp<CompEngineTrail>();
-						if (engineComp != null)
-							engineComp.Off();
+						engineComp?.Off();
 					}
 					else if (t is Pawn p)
                     {
 						if (p.jobs != null)
 						{
-							if (p.royalty.HasAnyTitleIn(Faction.OfEmpire))
-								p.royalty.SetTitle(Faction.OfEmpire, null, false);
 							p.jobs.ClearQueuedJobs();
 							p.jobs.EndCurrentJob(JobCondition.Incompletable);
 						}
-					}
+						if (ModsConfig.RoyaltyActive && p.royalty != null && p.royalty.HasAnyTitleIn(Faction.OfEmpire))
+                            p.royalty.SetTitle(Faction.OfEmpire, null, false);
+                    }
 					if (t.Map.zoneManager.ZoneAt(t.Position) != null && !zones.Contains(t.Map.zoneManager.ZoneAt(t.Position)))
 					{
 						zones.Add(t.Map.zoneManager.ZoneAt(t.Position));
@@ -2433,39 +2308,103 @@ namespace SaveOurShip2
 
 			GameVictoryUtility.ShowCredits(GameVictoryUtility.MakeEndCredits("GameOverShipPlanetLeaveIntro".Translate(), "GameOverShipPlanetLeaveEnding".Translate(), stringBuilder.ToString(), "GameOverColonistsEscaped", null), null, false, 5f);
 
-			RemoveShip(area.ToList(), map, true);
+			RemoveShipOrArea(map, core.ShipIndex);
 		}
-		public static void RemoveShip(List<IntVec3> area, Map map, bool planetTravel)
+        public static void SaveShipToFile(Building_ShipBridge core)
         {
-            /*SC var mapComp = map.GetComponent<ShipHeatMapComp>();
-			mapComp.CacheOff = true;
-            if (mapComp.ShipsOnMapNew.ContainsKey(mapComp.ShipCells[area.First()].Item1))
-                mapComp.ShipsOnMapNew.Remove(mapComp.ShipCells[area.First()].Item1);*/
-            AirlockBugFlag = true;
-			List<Thing> things = new List<Thing>();
-			List<Zone> zones = new List<Zone>();
-			foreach (IntVec3 pos in area)
+            Map map = core.Map;
+            var mapComp = map.GetComponent<ShipHeatMapComp>();
+            var ship = mapComp.ShipsOnMapNew[core.ShipIndex];
+            List<Pawn> toKill = new List<Pawn>();
+            foreach (Pawn p in ship.PawnsOnShip)
+            {
+                if (p.RaceProps != null && p.RaceProps.IsFlesh && (!p.InContainerEnclosed) && (!IsHologram(p) || p.health.hediffSet.GetFirstHediff<HediffPawnIsHologram>().consciousnessSource.Map != map))
+                    toKill.Add(p);
+            }
+            foreach (Pawn p in toKill)
+                p.Kill(null);
+
+            TravelEffects(core);
+            string folder = Path.Combine(GenFilePaths.SaveDataFolderPath, "SoS2");
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
+            string filename = Path.Combine(folder, Faction.OfPlayer.Name + "_" + core.ShipName + ".sos2");
+            SaveShip(core, filename);
+        }
+        public static void SpaceTravelWarning(Action action)
+        {
+            DiaNode theNode;
+            theNode = new DiaNode(TranslatorFormattedStringExtensions.Translate("ShipAbandonColoniesWarning"));
+
+            DiaOption accept = new DiaOption("Accept");
+            accept.resolveTree = true;
+            accept.action = action;
+            theNode.options.Add(accept);
+
+            DiaOption cancel = new DiaOption("Cancel");
+            cancel.resolveTree = true;
+            theNode.options.Add(cancel);
+
+            Dialog_NodeTree dialog_NodeTree = new Dialog_NodeTree(theNode, true, false, null);
+            dialog_NodeTree.silenceAmbientSound = false;
+            dialog_NodeTree.closeOnCancel = true;
+            Find.WindowStack.Add(dialog_NodeTree);
+        }
+        public static void TravelEffects(Building_ShipBridge bridge)
+        {
+            WorldComp.renderedThatAlready = false;
+
+            float EnergyCost = 100000;
+            foreach (CompPowerBattery capacitor in bridge.PowerComp.PowerNet.batteryComps)
+            {
+                if (capacitor.StoredEnergy <= EnergyCost)
+                {
+                    capacitor.SetStoredEnergyPct(capacitor.StoredEnergyPct - (EnergyCost / capacitor.Props.storedEnergyMax));
+                    EnergyCost = 0;
+                    break;
+                }
+                else
+                {
+                    EnergyCost -= capacitor.StoredEnergy;
+                    capacitor.SetStoredEnergyPct(0.05f);
+                }
+            }
+        }
+		public static void RemoveShipOrArea(Map map, int index = -1, HashSet<IntVec3> area = null)
+        {
+            var mapComp = map.GetComponent<ShipHeatMapComp>();
+            if (index != -1)
+            {
+                var ship = mapComp.ShipsOnMapNew[index];
+                area = ship.Area;
+                mapComp.RemoveShipFromCache(index);
+            }
+            else if (!area.Any())
 			{
-				//remove from cache
-                //SC mapComp.ShipCells.Remove(pos);
-				map.roofGrid.SetRoof(pos, null);
-				things.AddRange(pos.GetThingList(map));
+				return;
+			}
+            AirlockBugFlag = true;
+            List<Thing> things = new List<Thing>();
+            List<Zone> zones = new List<Zone>();
+            foreach (IntVec3 pos in area)
+            {
+                mapComp.MapShipCells.Remove(pos);
+                things.AddRange(pos.GetThingList(map));
 				if (map.zoneManager.ZoneAt(pos) != null && !zones.Contains(map.zoneManager.ZoneAt(pos)))
 				{
 					zones.Add(map.zoneManager.ZoneAt(pos));
 				}
 			}
-			foreach (Thing t in things)
+            foreach (Thing t in things)
 			{
 				try
 				{
-					if (!planetTravel && t is Pawn)
+					if (t is Pawn)
 						t.Kill();
 					if (t.def.destroyable && !t.Destroyed)
 					{
 						CompRefuelable refuelable = t.TryGetComp<CompRefuelable>();
-						if (refuelable != null)
-							refuelable.ConsumeFuel(refuelable.Fuel); //To avoid CompRefuelable.PostDestroy
+						refuelable?.ConsumeFuel(refuelable.Fuel); //To avoid CompRefuelable.PostDestroy
 						t.Destroy(DestroyMode.Vanish);
 					}
 				}
@@ -2477,9 +2416,14 @@ namespace SaveOurShip2
 			foreach (IntVec3 pos in area)
 			{
 				map.terrainGrid.SetTerrain(pos, ResourceBank.TerrainDefOf.EmptySpace);
-			}
+                map.roofGrid.SetRoof(pos, null);
+            }
 			AirlockBugFlag = false;
 
+            if (index != -1)
+            {
+                mapComp.RemoveShipFromCache(index);
+            }
             //regen affected map layers
             List<Section> sourceSec = new List<Section>();
 			if (zones.Any())
@@ -2522,8 +2466,8 @@ namespace SaveOurShip2
 				}
 			}
 			map.GetComponent<ShipHeatMapComp>().heatGridDirty = true;
-		}
-		public static bool CompatibleWithShipLoad(ScenPart item)
+        }
+        public static bool CompatibleWithShipLoad(ScenPart item)
 		{
 			return !(item is ScenPart_PlayerFaction || item is ScenPart_PlayerPawnsArriveMethod || item is ScenPart_ScatterThings || item is ScenPart_Naked || item is ScenPart_NoPossessions || item is ScenPart_GameStartDialog || item is ScenPart_AfterlifeVault || item is ScenPart_SetNeedLevel || item is ScenPart_StartingAnimal || item is ScenPart_StartingMech || item is ScenPart_StartingResearch || item is ScenPart_StartingThing_Defined || item is ScenPart_StartInSpace || item is ScenPart_ThingCount || item is ScenPart_ConfigPage_ConfigureStartingPawnsBase);
 		}
@@ -2535,88 +2479,42 @@ namespace SaveOurShip2
 		{
 			return room == null || room.OpenRoofCount > 0 || room.TouchesMapEdge;
 		}
-		public static byte EVAlevel(Pawn pawn)
+		public static bool AnyAdjRoomNotOutside(IntVec3 pos, Map map)
 		{
-			/*
-			8 - natural, unremovable, boosted: no rechecks
-			7 - boosted EVA: reset on equip change
-			6 - natural, unremovable: no rechecks
-			5 - proper EVA: reset on equip/hediff change
-			4 - active belt: reset on end
-			3 - inactive belt: trigger in weather
-			2 - skin only: reset on hediff change
-			1 - air only: reset on hediff change
-			0 - none: dead soon
-			*/
-			if (Find.World.GetComponent<PastWorldUWO2>().PawnsInSpaceCache.TryGetValue(pawn.thingIDNumber, out byte eva))
-				return eva;
-			byte result = EVAlevelSlow(pawn);
-			//Log.Message("EVA slow lvl: " + result + " on pawn " + pawn.Name);
-			Find.World.GetComponent<PastWorldUWO2>().PawnsInSpaceCache[pawn.thingIDNumber] = result;
-			return result;
-		}
-		public static byte EVAlevelSlow(Pawn pawn)
-		{
-			if (pawn.RaceProps.IsMechanoid || IsHologram(pawn) || !pawn.RaceProps.IsFlesh)
-				return 8;
-			if (pawn.def.tradeTags?.Contains("AnimalInsectSpace") ?? false)
-				return 6;
-			if (pawn.apparel == null)
-				return 0;
-			bool hasHelmet = false;
-			bool hasSuit = false;
-			bool hasBelt = false;
-			foreach (Apparel app in pawn.apparel.WornApparel)
+			foreach (IntVec3 v in GenAdj.CellsAdjacent8Way(pos, Rot4.North, new IntVec2(1, 1)))
 			{
-				if (app.def.apparel.tags.Contains("EVA"))
-				{
-					if (app.def.apparel.layers.Contains(ApparelLayerDefOf.Overhead))
-						hasHelmet = true;
-					if (app.def.apparel.layers.Contains(ApparelLayerDefOf.Shell) || app.def.apparel.layers.Contains(ApparelLayerDefOf.Middle))
-						hasSuit = true;
-				}
-				else if (app.def.defName.Equals("Apparel_SpaceSurvivalBelt"))
-				{
-					hasBelt = true;
-				}
+                if (!ExposedToOutside(v.GetRoom(map)))
+					return true;
 			}
-			if (hasHelmet && hasSuit)
-				return 7;
-			bool hasLung = false;
-			bool hasSkin = false;
-			if (pawn.health.hediffSet.GetFirstHediffOfDef(ResourceBank.HediffDefOf.SoSArchotechLung) != null)
-				hasLung = true;
-			if (pawn.health.hediffSet.GetFirstHediffOfDef(ResourceBank.HediffDefOf.SoSArchotechSkin) != null)
-				hasSkin = true;
-			if (hasLung && hasSkin)
-				return 5;
-			if (pawn.health.hediffSet.GetFirstHediffOfDef(ResourceBank.HediffDefOf.SpaceBeltBubbleHediff) != null)
-				return 4;
-			if (hasBelt)
-				return 3;
-			if (hasSkin)
-				return 2;
-			if (hasLung)
-				return 1;
-			return 0;
+			return false;
 		}
+    }
 
-		public static Rect FillableBarWithDepletion(Rect rect, float fillPercent, float fillDepletion, Texture2D fillTex, Texture2D depletionTex)
-		{
-			bool doBorder = rect.height > 15f && rect.width > 20f;
-			if (doBorder)
-			{
-				GUI.DrawTexture(rect, BaseContent.BlackTex);
-				rect = rect.ContractedBy(3f);
-			}
-			Rect heatRect = new Rect(rect);
-			heatRect.width *= fillPercent;
-			GUI.DrawTexture(heatRect, fillTex);
-			Rect depletionRect = new Rect(rect);
-			depletionRect.width *= fillDepletion;
-			depletionRect.x = rect.x + rect.width * (1 - fillDepletion);
-			GUI.DrawTexture(depletionRect, depletionTex);
-			return rect;
-		}
-	}
+    public class TimeHelper
+    {
+        private System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+        public struct TimeMeasure
+        {
+            public string name;
+            public TimeSpan time;
+        }
+
+        public List<TimeMeasure> measures = new List<TimeMeasure>();
+
+        public void Record(string name)
+        {
+            measures.Add(new TimeMeasure { name = name, time = watch.Elapsed });
+            watch.Restart();
+        }
+
+        public string MakeReport()
+        {
+            var sb = new StringBuilder();
+            foreach (var r in measures)
+            {
+                sb.AppendFormat("{0}={1}ms\n", r.name, r.time.TotalMilliseconds);
+            }
+            return sb.ToString();
+        }
+    }
 }

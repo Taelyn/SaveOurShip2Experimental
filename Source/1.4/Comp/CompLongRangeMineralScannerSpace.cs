@@ -9,7 +9,6 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using Verse;
-using HarmonyLib;
 
 namespace RimWorld
 {
@@ -64,6 +63,9 @@ namespace RimWorld
             {
                 Log.Error("Used while CanUseNow is false.");
             }
+            if (parent.Faction != Faction.OfPlayer)
+                return;
+
             if (Find.TickManager.TicksGame % 60 == 0)
             {
                 float statValue = worker.GetStatValue(StatDefOf.ResearchSpeed, true);
@@ -88,7 +90,7 @@ namespace RimWorld
         }
         public void ScannedRoom()
         {
-            if (mapComp.MasterMapComp.Scanned)
+            if (mapComp.TargetMapComp.Scanned)
                 return;
             List<Room> rooms = mapComp.ShipCombatTargetMap.regionGrid.allRooms.Where(r => !r.TouchesMapEdge && r.ProperRoom && r.Fogged).ToList();
             if (!rooms.NullOrEmpty())
@@ -99,7 +101,7 @@ namespace RimWorld
             else
             {
                 mapComp.ShipCombatTargetMap.fogGrid.ClearAllFog();
-                mapComp.MasterMapComp.Scanned = true;
+                mapComp.TargetMapComp.Scanned = true;
             }
         }
 
@@ -154,7 +156,7 @@ namespace RimWorld
             {
                 DerelictShip ship = new DerelictShip();
                 int rarity = Rand.RangeInclusive(1, 2);
-                if (Rand.Chance((float)SaveOurShip2.ModSettings_SoS.navyShipChance))
+                if (Rand.Chance((float)ModSettings_SoS.navyShipChance))
                 {
                     SpaceNavyDef navy = ShipInteriorMod2.ValidRandomNavy(Faction.OfPlayer);
                     if (navy != null)
@@ -173,7 +175,7 @@ namespace RimWorld
                     ship.derelictShip = DefDatabase<EnemyShipDef>.AllDefs.Where(def => def.spaceSite && def.rarityLevel <= rarity).RandomElement();
                     ship.shipFaction = Faction.OfAncientsHostile;
                 }
-                Log.Message("Created ship with def: " + ship.derelictShip + " fac: " + ship.shipFaction + " navy: " + ship.spaceNavyDef);
+                Log.Message("SOS2: ".Colorize(Color.cyan) + "Found ship with def: " + ship.derelictShip + " fac: " + ship.shipFaction + " navy: " + ship.spaceNavyDef);
                 parent.Map.passingShipManager.AddShip(ship);
                 if (worker != null)
                     Find.LetterStack.ReceiveLetter("SoSDerelictScan".Translate(), "SoSDerelictScanDesc".Translate(worker, ship.derelictShip), LetterDefOf.PositiveEvent);
@@ -204,7 +206,7 @@ namespace RimWorld
                     ship.shipFaction = Faction.OfAncientsHostile;
                 }
 
-                Log.Message("Created ship with def: " + ship.derelictShip + " fac: " + ship.shipFaction + " navy: " + ship.spaceNavyDef);
+                Log.Message("SOS2: ".Colorize(Color.cyan) + "Found ship with def: " + ship.derelictShip + " fac: " + ship.shipFaction + " navy: " + ship.spaceNavyDef);
                 parent.Map.passingShipManager.AddShip(ship);
                 if (worker != null)
                     Find.LetterStack.ReceiveLetter("SoSDerelictScan".Translate(), "SoSDerelictScanDesc".Translate(worker, ship.derelictShip), LetterDefOf.PositiveEvent);
@@ -215,7 +217,7 @@ namespace RimWorld
             {
                 AttackableShip ship = new AttackableShip();
                 int rarity = Rand.RangeInclusive(1, 2);
-                if (Rand.Chance((float)SaveOurShip2.ModSettings_SoS.navyShipChance))
+                if (Rand.Chance((float)ModSettings_SoS.navyShipChance))
                 {
                     SpaceNavyDef navy = ShipInteriorMod2.ValidRandomNavy();
                     if (navy != null)
@@ -231,7 +233,7 @@ namespace RimWorld
                     ship.shipFaction = Faction.OfAncientsHostile;
                 }
 
-                Log.Message("Created ship with def: " + ship.attackableShip + " fac: " + ship.shipFaction + " navy: " + ship.spaceNavyDef);
+                Log.Message("SOS2: ".Colorize(Color.cyan) + "Found ship with def: " + ship.attackableShip + " fac: " + ship.shipFaction + " navy: " + ship.spaceNavyDef);
                 parent.Map.passingShipManager.AddShip(ship);
                 if (worker != null)
                     Find.LetterStack.ReceiveLetter("SoSEnemyScan".Translate(), "SoSEnemyScanDesc".Translate(worker, ship.attackableShip), LetterDefOf.PositiveEvent);

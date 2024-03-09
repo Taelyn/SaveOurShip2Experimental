@@ -10,8 +10,15 @@ namespace RimWorld
 {
     public class CompShipHeatTacCon : CompShipHeat
     {
-        public bool PointDefenseMode = true;
-        public bool HoldFire = true;
+        public bool PointDefenseMode = false;
+        public bool HoldFire = false;
+
+        public override void PostExposeData()
+        {
+            base.PostExposeData();
+            Scribe_Values.Look<bool>(ref PointDefenseMode, "PointDefenseMode", false);
+            Scribe_Values.Look<bool>(ref HoldFire, "HoldFire", false);
+        }
         public override IEnumerable<Gizmo> CompGetGizmosExtra()
         {
             foreach (Gizmo gizmo in base.CompGetGizmosExtra())
@@ -66,6 +73,21 @@ namespace RimWorld
                 };
                 yield return toggleShields;
             }
+            var mapComp = parent.Map.GetComponent<ShipHeatMapComp>();
+            /*if (!mapComp.InCombat && mapComp.HasTarget)
+            {
+                Command_Action endTarget = new Command_Action
+                {
+                    action = delegate
+                    {
+                        mapComp.EndTarget();
+                    },
+                    defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipTargetEnd"),
+                    defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipTargetEndDesc"),
+                    icon = ContentFinder<Texture2D>.Get("UI/EndBattle_Icon")
+                };
+                yield return endTarget;
+            }*/
             if (!myNet.Turrets.Any())
                 yield break;
             if (myNet.Turrets.Any(t => ((Building_ShipTurret)t.parent).holdFire == false))

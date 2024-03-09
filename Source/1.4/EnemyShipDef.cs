@@ -20,6 +20,7 @@ namespace RimWorld
         public Rot4 rot;
         public bool alt; //alternate mode, for sun lights, etc.
         public float radius;
+        public string faction; //faction override
 
         public override int GetHashCode()
         {
@@ -39,6 +40,7 @@ namespace RimWorld
         {
             Scribe_Values.Look<string>(ref shapeOrDef, "shapeOrDef");
             Scribe_Values.Look<string>(ref stuff, "stuff");
+            Scribe_Values.Look<string>(ref faction, "faction");
             //Scribe_Values.Look<int>(ref x, "x");
             //Scribe_Values.Look<int>(ref z, "z");
             Scribe_Values.Look<int>(ref width, "width");

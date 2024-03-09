@@ -38,10 +38,10 @@ namespace RimWorld.Planet
                     }
                 }
                 bool flag3 = false;
-                Map mapPlayer = ((MapParent)Find.WorldObjects.AllWorldObjects.Where(ob => ob.def == ResourceBank.WorldObjectDefOf.ShipOrbiting).FirstOrDefault())?.Map;
+                Map mapPlayer = ShipInteriorMod2.FindPlayerShipMap();
                 if (mapPlayer != null)
                 {
-                    foreach (Building_ShipAdvSensor sensor in Find.World.GetComponent<PastWorldUWO2>().Sensors)
+                    foreach (Building_ShipAdvSensor sensor in ShipInteriorMod2.WorldComp.Sensors)
                     {
                         if (sensor.observedMap == this.parent)
                         {
@@ -53,7 +53,7 @@ namespace RimWorld.Planet
                 {
                     Find.LetterStack.ReceiveLetter(TranslatorFormattedStringExtensions.Translate("ImpactSiteLostLabel"), TranslatorFormattedStringExtensions.Translate("ImpactSiteLost"), LetterDefOf.NegativeEvent, null);
                     Find.WorldObjects.Remove(this.parent);
-                    ShipInteriorMod2.GenerateImpactSite();
+                    ShipInteriorMod2.GenerateSite("ShipEngineImpactSite");
                 }
             }
         }

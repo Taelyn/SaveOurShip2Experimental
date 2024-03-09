@@ -1,9 +1,11 @@
-﻿using System;
+﻿using SaveOurShip2;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
 using Verse;
+using Verse.Sound;
 
 namespace RimWorld
 {
@@ -20,17 +22,18 @@ namespace RimWorld
         private static Vector3[] offsetE = { new Vector3(0, 0, -9.2f), new Vector3(-9.2f, 0, 0), new Vector3(0, 0, 9.2f), new Vector3(9.2f, 0, 0) };
         public static IntVec2[] killOffset = { new IntVec2(0, -6), new IntVec2(-6, 0), new IntVec2(0, 4), new IntVec2(4, 0) };
         public static IntVec2[] killOffsetL = { new IntVec2(0, -13), new IntVec2(-13, 0), new IntVec2(0, 7), new IntVec2(7, 0) };
-		public CompProperties_EngineTrail Props
+		public virtual CompProperties_EngineTrail Props
         {
             get { return props as CompProperties_EngineTrail; }
         }
-        public virtual float Thrust
+        public virtual int Thrust
         {
             get
             {
                 return Props.thrust;
             }
         }
+        public bool PodFueled => refuelComp.Props.fuelFilter.AllowedThingDefs.Contains(ResourceBank.ThingDefOf.ShuttleFuelPods);
         public bool active = false;
         int size;
         public HashSet<IntVec3> ExhaustArea = new HashSet<IntVec3>();
@@ -38,30 +41,73 @@ namespace RimWorld
         public CompFlickable flickComp;
         public CompRefuelable refuelComp;
         public CompPowerTrader powerComp;
-        public bool CanFire(int rot)
+        Sustainer sustainer;
+
+        public bool CanFire()
         {
-            if (flickComp.SwitchIsOn && rot == this.parent.Rotation.AsInt)
+            if (flickComp.SwitchIsOn && powerComp.PowerOn)
             {
-                if (Props.energy && powerComp.PowerOn)
+                if (Props.reactionless)
+                {
+                    if (powerComp.PowerOn)
+                        return true;
+                }
+                else if (Props.energy)
                 {
                     return true;
                 }
-                else if (refuelComp.Fuel > 0)
+                else if (refuelComp.Fuel > Props.fuelUse)
                 {
                     return true;
                 }
             }
             return false;
         }
-        public bool On()
+        public bool CanFire(Rot4 rot)
+        {
+            if (flickComp.SwitchIsOn && powerComp.PowerOn)
+            {
+                if (Props.reactionless)
+                {
+                    if (powerComp.PowerOn)
+                        return true;
+                }
+                else if (rot == parent.Rotation)
+                {
+                    if (Props.energy)
+                    {
+                        return true;
+                    }
+                    else if (refuelComp.Fuel > Props.fuelUse)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        public void On()
         {
             if (Props.energy)
             {
-                powerComp.PowerOutput = -2000 * Props.thrust;
+                powerComp.PowerOutput = -2000 * Thrust;
+            }
+            active = true;
+        }
+        public bool OnOld()
+        {
+            if (Props.reactionless)
+            {
                 active = true;
                 return true;
             }
-            else if (refuelComp.Fuel > 0)
+            if (Props.energy)
+            {
+                powerComp.PowerOutput = -2000 * Thrust;
+                active = true;
+                return true;
+            }
+            if (refuelComp.Fuel > Props.fuelUse)
             {
                 active = true;
                 return true;
@@ -72,9 +118,13 @@ namespace RimWorld
         {
             if (Props.energy)
             {
-                powerComp.PowerOutput = -200 * Props.thrust;
+                powerComp.PowerOutput = -200 * Thrust;
             }
             active = false;
+            /*if (sustainer != null && !sustainer.Ended)
+            {
+                sustainer.End();
+            }*/
         }
         public override void PostSpawnSetup(bool respawningAfterLoad)
         {
@@ -84,6 +134,8 @@ namespace RimWorld
             powerComp = parent.TryGetComp<CompPowerTrader>();
             mapComp = parent.Map.GetComponent<ShipHeatMapComp>();
             size = parent.def.size.x;
+            if (Props.reactionless)
+                return;
             ExhaustArea.Clear();
             CellRect rectToKill;
             if (size > 3)
@@ -101,13 +153,17 @@ namespace RimWorld
         }
         public override void PostDeSpawn(Map map)
         {
-            mapComp = null;
+            var mapComp = map.GetComponent<ShipHeatMapComp>();
+            if (mapComp.ShipsOnMapNew.Values.Any(s => !s.IsWreck && s.Engines.Any()))
+                mapComp.EngineRot = -1;
+            Off();
+            //sustainer = null;
             base.PostDeSpawn(map);
         }
         public override void PostDraw()
         {
             base.PostDraw();
-            if (!Props.reactionless && active)
+            if (active && !Props.reactionless)
             {
                 if (Props.energy)
                 {
@@ -151,25 +207,46 @@ namespace RimWorld
             base.CompTick();
             if (active)
             {
-                if (refuelComp != null && Find.TickManager.TicksGame % 60 == 0)
+                if (Find.TickManager.TicksGame % 60 == 0)
                 {
-                    refuelComp.ConsumeFuel(Props.fuelUse);
-                }
-                if (!Props.reactionless) { 
-                    //destroy stuff in plume
-                    HashSet<Thing> toBurn = new HashSet<Thing>();
-                    foreach (IntVec3 cell in ExhaustArea)
+                    if (!flickComp.SwitchIsOn || !powerComp.PowerOn)
                     {
-                        foreach (Thing t in cell.GetThingList(parent.Map))
+                        Off();
+                        return;
+                    }
+                    if (refuelComp != null)
+                    {
+                        if (refuelComp.Fuel < Props.fuelUse)
                         {
-                            if ((t.def.useHitPoints || t is Pawn) && t.def.altitudeLayer != AltitudeLayer.Terrain)
-                                toBurn.Add(t);
+                            Off();
+                            return;
                         }
+                        refuelComp.ConsumeFuel(Props.fuelUse);
                     }
-                    foreach (Thing t in toBurn)
+                    /*if (!Props.soundWorking.NullOrUndefined())
                     {
-                        t.TakeDamage(new DamageInfo(DamageDefOf.Bomb, 100));
+                        if (sustainer == null || sustainer.Ended)
+                        {
+                            sustainer = Props.soundWorking.TrySpawnSustainer(SoundInfo.InMap(parent, MaintenanceType.None));
+                        }
+                        sustainer.Maintain();
+                    }*/
+                }
+                if (Props.reactionless)
+                    return;
+                //destroy stuff in plume
+                HashSet<Thing> toBurn = new HashSet<Thing>();
+                foreach (IntVec3 cell in ExhaustArea)
+                {
+                    foreach (Thing t in cell.GetThingList(parent.Map))
+                    {
+                        if ((t.def.useHitPoints || t is Pawn) && t.def.altitudeLayer != AltitudeLayer.Terrain)
+                            toBurn.Add(t);
                     }
+                }
+                foreach (Thing t in toBurn)
+                {
+                    t.TakeDamage(new DamageInfo(DamageDefOf.Bomb, 100));
                 }
             }
         }

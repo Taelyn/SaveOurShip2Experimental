@@ -54,37 +54,37 @@
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>E:\Steam\steamapps\workshop\content\294100\2009463077\Current\Assemblies\0Harmony.dll</HintPath>
+      <HintPath>..\..\..\2009463077 Harmony\Current\Assemblies\0Harmony.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Assembly-CSharp">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.IMGUIModule">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.TextCoreModule">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.TextCoreModule.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.TextCoreModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">
-      <HintPath>E:\Steam\steamapps\common\RimWorld\RimWorldWin64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <HintPath>..\..\..\..\RimWorldWin64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
@@ -92,9 +92,15 @@
     <Compile Include="Alert_ArchotechSporeMoodLow.cs" />
     <Compile Include="Alert_MechanitesInHomeArea.cs" />
     <Compile Include="ApparelHolographic.cs" />
-    <Compile Include="ApparelSpaceBelt.cs" />
     <Compile Include="ArchotechGiftDef.cs" />
-    <Compile Include="AttackableShip.cs" />
+    <Compile Include="Comp\CompProperties_SoShipLight.cs" />
+    <Compile Include="Comp\CompSoShipLight.cs" />
+    <Compile Include="Extensions\PawnExtensions.cs" />
+    <Compile Include="Jobs\JobDriver_DefendBreacher.cs" />
+    <Compile Include="Jobs\JobGiver_AIDefendBreacher.cs" />
+    <Compile Include="PlaceWorker\PlaceWorker_ShipBay.cs" />
+    <Compile Include="Ships\PirateShip.cs" />
+    <Compile Include="Ships\AttackableShip.cs" />
     <Compile Include="Building\Building_ArchotechPillar.cs" />
     <Compile Include="Building\Building_Radiator.cs" />
     <Compile Include="Building\Building_SatelliteCore.cs" />
@@ -113,22 +119,23 @@
     <Compile Include="ArrivalAction\CaravanArrivalAction_VisitInsectPillarSite.cs" />
     <Compile Include="ArrivalAction\CaravanArrivalAction_VisitImpactSite.cs" />
     <Compile Include="ArrivalAction\TransportPodsArrivalAction_ShipAssault.cs" />
-    <Compile Include="ChoiceLetter_SpacePodEncounter.cs" />
+    <Compile Include="Events\ChoiceLetter_SpacePod.cs" />
     <Compile Include="CompProps\CompProperties_SoShipDocking.cs" />
     <Compile Include="CompProps\CompProperties_RCSThruster.cs" />
     <Compile Include="Comp\CompSoShipDocking.cs" />
-    <Compile Include="GameCondition_SpaceDebris.cs" />
+    <Compile Include="Events\GameCondition_SpaceDebris.cs" />
     <Compile Include="HarmonyPatches.cs" />
-    <Compile Include="IncidentWorker_SpaceDebris.cs" />
+    <Compile Include="Events\IncidentWorker_SpacePirates.cs" />
+    <Compile Include="Events\IncidentWorker_SpacePod.cs" />
+    <Compile Include="Events\IncidentWorker_SpaceDebris.cs" />
     <Compile Include="Jobs\JobDriver_LoadShipBuilding.cs" />
     <Compile Include="Jobs\JobGiver_LoadShipBuilding.cs" />
+    <Compile Include="Comp\PastWorldUWO2.cs" />
     <Compile Include="PlaceWorker\PlaceWorker_ShipPlating.cs" />
     <Compile Include="Projectile\Projectile_ExplosiveShipDebris.cs" />
-    <Compile Include="Quest\QuestNode_RoyalAscentShip.cs" />
-    <Compile Include="Quest\QuestPart_RoyalAscentShip.cs" />
     <Compile Include="ResourceBank.cs" />
-    <Compile Include="CompProps\CompProperties_HologramRemover.cs" />
-    <Compile Include="Comp\CompHologramRemover.cs" />
+    <Compile Include="Obsolete\CompProperties_HologramRemover.cs" />
+    <Compile Include="Obsolete\CompHologramRemover.cs" />
     <Compile Include="ScenPart_LoadShip.cs" />
     <Compile Include="SpaceNavyDef.cs" />
     <Compile Include="CompProps\CompProperties_ShipBlueprint.cs" />
@@ -151,7 +158,7 @@
     <Compile Include="Comp\CompHibernatableSoS.cs" />
     <Compile Include="Comp\CompHolodeck.cs" />
     <Compile Include="Obsolete\CompHologramGlower.cs" />
-    <Compile Include="Comp\CompHologramRelay.cs" />
+    <Compile Include="Obsolete\CompHologramRelay.cs" />
     <Compile Include="Comp\CompHullFoamDistributor.cs" />
     <Compile Include="Comp\CompLongRangeMineralScannerSpace.cs" />
     <Compile Include="Comp\CompLongRangeMineralScannerSpaceAI.cs" />
@@ -172,7 +179,7 @@
     <Compile Include="CompProps\CompProperties_HibernatableSoS.cs" />
     <Compile Include="CompProps\CompProperties_Holodeck.cs" />
     <Compile Include="Obsolete\CompProperties_HologramGlower.cs" />
-    <Compile Include="CompProps\CompProperties_HologramRelay.cs" />
+    <Compile Include="Obsolete\CompProperties_HologramRelay.cs" />
     <Compile Include="CompProps\CompProperties_LongRangeMineralScannerSpaceAI.cs" />
     <Compile Include="CompProps\CompProperties_LongRangeMineralScannerSpace.cs" />
     <Compile Include="CompProps\CompProperties_Overlay.cs" />
@@ -214,24 +221,26 @@
     <Compile Include="Comp\CompShipBluePrint.cs" />
     <Compile Include="Comp\HediffComp_Bubble.cs" />
     <Compile Include="CompProps\HediffCompProperties_Bubble.cs" />
+    <Compile Include="Comp\Comp_EVA.cs" />
     <Compile Include="PlaceWorker\PlaceWorker_ShipBlueprint.cs" />
     <Compile Include="SoShipCache.cs" />
     <Compile Include="DamageWorker_Mechanite.cs" />
     <Compile Include="DamageWorker_PsychicFlayer.cs" />
     <Compile Include="DeathActionWorker_AntigrainExplosion.cs" />
-    <Compile Include="DerelictShip.cs" />
+    <Compile Include="Ships\DerelictShip.cs" />
     <Compile Include="Designator_Ship.cs" />
     <Compile Include="DetachedShipPart.cs" />
-    <Compile Include="Dialog_NameAI.cs" />
-    <Compile Include="Dialog_NameShip.cs" />
-    <Compile Include="Dialog_Pirate.cs" />
+    <Compile Include="Dialog\Dialog_LoadShipDef.cs" />
+    <Compile Include="Dialog\Dialog_NameAI.cs" />
+    <Compile Include="Dialog\Dialog_NameShip.cs" />
+    <Compile Include="Dialog\Dialog_Pirate.cs" />
     <Compile Include="Jobs\LordJob_AssaultShip.cs" />
     <Compile Include="Jobs\JobGiver_AIBreachAirlock.cs" />
     <Compile Include="Jobs\LordToil_AssaultShip.cs" />
     <Compile Include="Obsolete\Dialog_SalvageShip.cs" />
     <Compile Include="EnemyShipDef.cs" />
     <Compile Include="EnemyShipPartDef.cs" />
-    <Compile Include="Comp\EnvironmentCachingUtility.cs" />
+    <Compile Include="Extensions\EnvironmentCachingUtility.cs" />
     <Compile Include="MapGen\GenStep_EverythingIsRocks.cs" />
     <Compile Include="MapGen\GenStep_HackableSatellite.cs" />
     <Compile Include="MapGen\GenStep_BlackBoxMission.cs" />
@@ -258,8 +267,7 @@
     <Compile Include="CompProps\HediffCompProperties_OnlyInSpace.cs" />
     <Compile Include="Comp\HediffComp_GiveSubPart.cs" />
     <Compile Include="HediffPawnIsHologram.cs" />
-    <Compile Include="Hediff_AddedPartNoRemoveSubparts.cs" />
-    <Compile Include="HideLightingLayersInSpace.cs" />
+    <Compile Include="Obsolete\Hediff_AddedPartNoRemoveSubparts.cs" />
     <Compile Include="Comp\InsectPillarSiteComp.cs" />
     <Compile Include="Jobs\JobDriver_FleeVacuum.cs" />
     <Compile Include="Jobs\JobDriver_InstallConsciousness.cs" />
@@ -279,7 +287,7 @@
     <Compile Include="Comp\TribalPillarSiteComp.cs" />
     <Compile Include="Comp\ImpactSiteComp.cs" />
     <Compile Include="Obsolete\IncidentWorker_FreeEntanglement.cs" />
-    <Compile Include="IncidentWorker_ShipCombat.cs" />
+    <Compile Include="Events\IncidentWorker_ShipCombat.cs" />
     <Compile Include="Jobs\JobDriver_BreachAirlock.cs" />
     <Compile Include="Jobs\JobDriver_HackAirlock.cs" />
     <Compile Include="Jobs\JobDriver_HackShipBridge.cs" />
@@ -314,7 +322,7 @@
     <Compile Include="PlaceWorker\PlaceWorker_ShipVent.cs" />
     <Compile Include="PlaceWorker\Placeworker_SolarShip.cs" />
     <Compile Include="PlaceWorker\PlaceWorker_SpinalMountPort.cs" />
-    <Compile Include="PreviousWorld.cs" />
+    <Compile Include="Obsolete\PreviousWorld.cs" />
     <Compile Include="Obsolete\Bullet_HologramLaser.cs" />
     <Compile Include="Projectile\Projectile_SoSFake.cs" />
     <Compile Include="Projectile\Projectile_ExplosiveShipCombat.cs" />
@@ -398,10 +406,12 @@
     <Compile Include="Thought\ThoughtWorker_SpaceThoughts.cs" />
     <Compile Include="Comp\TimedForcedExitShip.cs" />
     <Compile Include="Comp\UnfoldComponent.cs" />
-    <Compile Include="Verb\Command_VerbTargetWreckMap.cs" />
-    <Compile Include="Verb\Command_VerbTargetWreck.cs" />
-    <Compile Include="Verb\Command_VerbTargetShip.cs" />
+    <Compile Include="Verb\Command_SelectShipMap.cs" />
+    <Compile Include="Verb\Command_TargetWreck.cs" />
+    <Compile Include="Verb\Command_TargetShipRemove.cs" />
+    <Compile Include="Verb\Command_TargetShipCombat.cs" />
     <Compile Include="Verb\Verb_LaunchProjectileShip.cs" />
+    <Compile Include="Verb\Verb_SpaceBubblePop.cs" />
     <Compile Include="Jobs\WorkGiver_FightMechanites.cs" />
     <Compile Include="Jobs\WorkGiver_InstallConsciousness.cs" />
     <Compile Include="Jobs\WorkGiver_LoadTorpedoTube.cs" />
@@ -417,7 +427,7 @@
     <Compile Include="MapGen\GenStep_EmptySpace.cs" />
     <Compile Include="BiomeWorker_OuterSpace.cs" />
     <Compile Include="WeatherEvent_VacuumDamage.cs" />
-    <Compile Include="WorldSwitchUtility.cs" />
+    <Compile Include="Obsolete\WorldSwitchUtility.cs" />
     <Compile Include="Jobs\JobDriver_CarryToCryptonest.cs" />
   </ItemGroup>
   <ItemGroup>

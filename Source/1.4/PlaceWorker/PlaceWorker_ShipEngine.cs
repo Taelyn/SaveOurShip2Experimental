@@ -1,7 +1,6 @@
-﻿using System;
+﻿using SaveOurShip2;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using Verse;
 
@@ -11,12 +10,21 @@ namespace RimWorld
     {
         public override AcceptanceReport AllowsPlacing(BuildableDef checkingDef, IntVec3 loc, Rot4 rot, Map map, Thing thingToIgnore = null, Thing thing = null)
         {
-            Building engineprev = map.listerBuildings.allBuildingsColonist.Where(x => x.TryGetComp<CompEngineTrail>() != null 
-                && !x.TryGetComp<CompEngineTrail>().Props.reactionless).FirstOrDefault();
-            if (engineprev == null || (engineprev != null && engineprev.Rotation == rot))
+            if (ShipInteriorMod2.HasSoS2CK)
                 return AcceptanceReport.WasAccepted;
-            else
+            CompEngineTrail engineprev = null;
+            var mapComp = map.GetComponent<ShipHeatMapComp>();
+            if (mapComp.ShipsOnMapNew.Values.Any(s => s.Engines.Any()))
+            {
+                //prefer player owned non wreck ships
+                if (mapComp.ShipsOnMapNew.Values.Any(s => s.Engines.Any() && !s.IsWreck && s.Faction == Faction.OfPlayer))
+                    engineprev = mapComp.ShipsOnMapNew.Values.Where(s => s.Engines.Any() && !s.IsWreck && s.Faction == Faction.OfPlayer).First().Engines.First();
+                else if (mapComp.ShipsOnMapNew.Values.Any(s => s.Engines.Any()))
+                    engineprev = mapComp.ShipsOnMapNew.Values.First(s => s.Engines.Any()).Engines.First();
+            }
+            if (engineprev != null && engineprev.parent.Rotation != rot)
                 return AcceptanceReport.WasRejected;
+            return AcceptanceReport.WasAccepted;
         }
         public override void DrawGhost(ThingDef def, IntVec3 center, Rot4 rot, Color ghostCol, Thing thing = null)
         {

@@ -24,7 +24,7 @@ namespace RimWorld
         { 
             get
             {
-                return StorageCapacityRaw * (1 - depletionRatio);
+                return StorageCapacityRaw * (1 - DepletionRatio);
             }
         }
         public float StorageCapacityRaw //total capacity
@@ -32,6 +32,7 @@ namespace RimWorld
             get;
             private set;
         }
+        public float StorageAvailable => StorageCapacity - StorageUsed;
         public float StorageUsed { get; private set; }
         public float Depletion { get; private set; }
         public bool venting;
@@ -222,6 +223,8 @@ namespace RimWorld
         }
         public void AddDepletion(float amount)
         {
+            if (amount > StorageAvailable) //remove heat to add depletion
+                RemoveHeat(amount - StorageAvailable);
             Depletion += amount;
             depletionDirty = true;
         }

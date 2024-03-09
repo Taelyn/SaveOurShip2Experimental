@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Defs>
 	<PawnKindDef>
 		<defName>SpaceCannibal</defName>
@@ -76,6 +76,53 @@
 		<initialResistanceRange>10~17</initialResistanceRange>
 	</PawnKindDef>
 	<PawnKindDef ParentName="OutlanderBase">
+		<defName>SpaceCrewEVA</defName>
+		<label>space crew</label>
+		<race>Human</race>
+		<combatPower>40</combatPower>
+		<isFighter>false</isFighter>
+		<defaultFactionType>AncientsHostile</defaultFactionType>
+		<maxGenerationAge>55</maxGenerationAge>
+		<backstoryCryptosleepCommonality>1</backstoryCryptosleepCommonality>
+		<apparelMoney>2000~2600</apparelMoney>
+		<apparelTags>
+			<li>IndustrialMilitaryBasic</li>
+			<li>IndustrialMilitaryAdvanced</li>
+		</apparelTags>
+		<apparelRequired>
+			<li>Apparel_SpaceSuitHelmet</li>
+			<li>Apparel_SpaceSuitBody</li>
+		</apparelRequired>
+		<specificApparelRequirements>
+			<li>
+				<bodyPartGroup>Torso</bodyPartGroup>
+				<apparelLayer>OnSkin</apparelLayer>
+			</li>
+			<li>
+				<bodyPartGroup>Legs</bodyPartGroup>
+				<apparelLayer>OnSkin</apparelLayer>
+			</li>
+		</specificApparelRequirements>
+		<forceNormalGearQuality>true</forceNormalGearQuality>
+		<apparelIgnoreSeasons>true</apparelIgnoreSeasons>
+		<weaponMoney>200~400</weaponMoney>
+		<weaponTags>
+			<li>SimpleGun</li>
+			<li>IndustrialGunAdvanced</li>
+			<li>SpacerGun</li>
+		</weaponTags>
+		<techHediffsChance>0.15</techHediffsChance>
+		<techHediffsMoney>600~1500</techHediffsMoney>
+		<techHediffsTags>
+			<li>Poor</li>
+			<li>Simple</li>
+			<li>Advanced</li>
+			<li>ImplantEmpireCommon</li>
+		</techHediffsTags>
+		<initialWillRange>1~3</initialWillRange>
+		<initialResistanceRange>10~17</initialResistanceRange>
+	</PawnKindDef>
+	<PawnKindDef ParentName="OutlanderBase">
 		<defName>SpaceCrewMarine</defName>
 		<label>light marine</label>
 		<race>Human</race>
@@ -110,13 +157,13 @@
 			<li>IndustrialGunAdvanced</li>
 			<li>SpacerGun</li>
 		</weaponTags>
+		<techHediffsChance>0.40</techHediffsChance>
 		<techHediffsMoney>2000~3000</techHediffsMoney>
 		<techHediffsTags>
 			<li>Advanced</li>
 			<li>AdvancedWeapon</li>
 			<li>ImplantEmpireCommon</li>
 		</techHediffsTags>
-		<techHediffsChance>0.40</techHediffsChance>
 		<combatEnhancingDrugsChance>0.5</combatEnhancingDrugsChance>
 		<combatEnhancingDrugsCount>
 			<min>1</min>
@@ -194,25 +241,25 @@
 		<initialWillRange>4~6</initialWillRange>
 		<initialResistanceRange>17~26</initialResistanceRange>
 	</PawnKindDef>
-	<ThingDef Abstract="True" ParentName="AnimalThingBase" Name="BaseInsectSpace">
+
+	<!--space bugs-->
+	<ThingDef ParentName="BaseInsect" Name="SpaceInsectThingBase" Abstract="True">
 		<statBases>
-			<ToxicResistance>1</ToxicResistance>
 			<ComfyTemperatureMax>20</ComfyTemperatureMax>
 			<ComfyTemperatureMin>-100</ComfyTemperatureMin>
+			<HypoxiaResistance>1</HypoxiaResistance>
+			<DecompressionResistance>1</DecompressionResistance>
+			<LeatherAmount>0</LeatherAmount>
 		</statBases>
 		<race>
-			<fleshType>Insectoid</fleshType>
-			<bloodDef>Filth_BloodInsect</bloodDef>
-			<meatColor>(160,168,139)</meatColor>
-			<meatMarketValue>0.5</meatMarketValue>
 			<foodType>OmnivoreAnimal, AnimalProduct</foodType>
 			<manhunterOnDamageChance>0.35</manhunterOnDamageChance>
 			<manhunterOnTameFailChance>0.20</manhunterOnTameFailChance>
 			<useMeatFrom>Megaspider</useMeatFrom>
 		</race>
 	</ThingDef>
-	<!-- ====================================================== -->
-	<ThingDef ParentName="BaseInsectSpace">
+	<!-- Astromite -->
+	<ThingDef ParentName="SpaceInsectThingBase">
 		<defName>Astromite</defName>
 		<label>astromite</label>
 		<description>A large, genetically-engineered mite. Thick chitin plates and an anaerobic metabolism allow it to survive in space. Originally designed as part of an organic asteroid-mining system, the project was abandoned when the hives proved too difficult to control. Like other eusocial arthropods, it cannot reproduce individually.</description>
@@ -222,36 +269,12 @@
 			<ArmorRating_Sharp>0.72</ArmorRating_Sharp>
 			<ComfyTemperatureMin>-50</ComfyTemperatureMin>
 			<MarketValue>100</MarketValue>
-			<LeatherAmount>0</LeatherAmount>
 		</statBases>
-		<tools>
-			<li>
-				<label>mandibles</label>
-				<capacities>
-					<li>Bite</li>
-				</capacities>
-				<power>5</power>
-				<cooldownTime>2</cooldownTime>
-				<linkedBodyPartsGroup>Mouth</linkedBodyPartsGroup>
-			</li>
-			<li>
-				<label>head</label>
-				<capacities>
-					<li>Blunt</li>
-				</capacities>
-				<power>4</power>
-				<cooldownTime>2</cooldownTime>
-				<linkedBodyPartsGroup>HeadAttackTool</linkedBodyPartsGroup>
-				<ensureLinkedBodyPartsGroupAlwaysUsable>true</ensureLinkedBodyPartsGroupAlwaysUsable>
-				<chanceFactor>0.1</chanceFactor>
-			</li>
-		</tools>
 		<race>
 			<body>BeetleLike</body>
 			<baseBodySize>0.2</baseBodySize>
 			<baseHungerRate>0.010</baseHungerRate>
 			<baseHealthScale>0.4</baseHealthScale>
-			<useMeatFrom>Megaspider</useMeatFrom>
 			<wildness>0.95</wildness>
 			<lifeExpectancy>10</lifeExpectancy>
 			<lifeStageAges>
@@ -280,6 +303,28 @@
 			<li>AnimalInsectSpace</li>
 			<li>AnimalInsect</li>
 		</tradeTags>
+		<tools>
+			<li>
+				<label>mandibles</label>
+				<capacities>
+					<li>Bite</li>
+				</capacities>
+				<power>5</power>
+				<cooldownTime>2</cooldownTime>
+				<linkedBodyPartsGroup>Mouth</linkedBodyPartsGroup>
+			</li>
+			<li>
+				<label>head</label>
+				<capacities>
+					<li>Blunt</li>
+				</capacities>
+				<power>4</power>
+				<cooldownTime>2</cooldownTime>
+				<linkedBodyPartsGroup>HeadAttackTool</linkedBodyPartsGroup>
+				<ensureLinkedBodyPartsGroupAlwaysUsable>true</ensureLinkedBodyPartsGroupAlwaysUsable>
+				<chanceFactor>0.1</chanceFactor>
+			</li>
+		</tools>
 	</ThingDef>
 	<PawnKindDef ParentName="AnimalKindBase">
 		<defName>Astromite</defName>
@@ -296,7 +341,7 @@
 					<color>(114,107,84)</color>
 				</bodyGraphicData>
 				<dessicatedBodyGraphicData>
-					<texPath>Things/Pawn/Animal/Megascarab/Dessicated_Megascarab</texPath>
+					<texPath>Things/Pawn/Dessicated_KillerSpaceBug_small</texPath>
 					<drawSize>1</drawSize>
 				</dessicatedBodyGraphicData>
 			</li>
@@ -307,7 +352,7 @@
 					<color>(114,107,84)</color>
 				</bodyGraphicData>
 				<dessicatedBodyGraphicData>
-					<texPath>Things/Pawn/Animal/Megascarab/Dessicated_Megascarab</texPath>
+					<texPath>Things/Pawn/Dessicated_KillerSpaceBug_small</texPath>
 					<drawSize>1.25</drawSize>
 				</dessicatedBodyGraphicData>
 			</li>
@@ -322,24 +367,59 @@
 					</shadowData>
 				</bodyGraphicData>
 				<dessicatedBodyGraphicData>
-					<texPath>Things/Pawn/Animal/Megascarab/Dessicated_Megascarab</texPath>
+					<texPath>Things/Pawn/Dessicated_KillerSpaceBug_small</texPath>
 					<drawSize>1.5</drawSize>
 				</dessicatedBodyGraphicData>
 			</li>
 		</lifeStages>
 	</PawnKindDef>
-	<!-- ====================================================== -->
-	<ThingDef ParentName="BaseInsectSpace">
+	<!-- Stellapede -->
+	<ThingDef ParentName="SpaceInsectThingBase">
 		<defName>Stellapede</defName>
 		<label>stellapede</label>
 		<description>A vacuum-adapted variant of the familiar spelopede, the stellapede's anaerobic metabolism allows it to survive in space indefinitely. It appears to subsist primarily on minerals, but will eagerly hunt any organic prey it senses.</description>
 		<statBases>
 			<MoveSpeed>3.65</MoveSpeed>
 			<MarketValue>200</MarketValue>
-			<LeatherAmount>0</LeatherAmount>
 			<ArmorRating_Blunt>0.18</ArmorRating_Blunt>
 			<ArmorRating_Sharp>0.18</ArmorRating_Sharp>
 		</statBases>
+		<race>
+			<body>BeetleLikeWithClaw</body>
+			<baseHungerRate>0.025</baseHungerRate>
+			<baseBodySize>0.8</baseBodySize>
+			<baseHealthScale>1.7</baseHealthScale>
+			<lifeExpectancy>6</lifeExpectancy>
+			<wildness>0.95</wildness>
+			<trainability>Advanced</trainability>
+			<lifeStageAges>
+				<li>
+					<def>EusocialInsectLarva</def>
+					<minAge>0</minAge>
+				</li>
+				<li>
+					<def>EusocialInsectJuvenile</def>
+					<minAge>0.03</minAge>
+				</li>
+				<li>
+					<def>EusocialInsectAdult</def>
+					<minAge>0.2</minAge>
+					<soundWounded>Pawn_Spelopede_Pain</soundWounded>
+					<soundDeath>Pawn_Spelopede_Death</soundDeath>
+					<soundCall>Pawn_Spelopede_Call</soundCall>
+					<soundAngry>Pawn_Spelopede_Angry</soundAngry>
+				</li>
+			</lifeStageAges>
+			<soundMeleeHitPawn>Pawn_Melee_SmallScratch_HitPawn</soundMeleeHitPawn>
+			<soundMeleeHitBuilding>Pawn_Melee_SmallScratch_HitBuilding</soundMeleeHitBuilding>
+			<soundMeleeMiss>Pawn_Melee_SmallScratch_Miss</soundMeleeMiss>
+			<headPosPerRotation>
+				<li>(0.0, 0, 0.14)</li>
+				<li>(0.07, 0, 0.08)</li>
+				<li>(0.0, 0, -0.12)</li>
+				<li>(-0.07, 0, 0.08)</li>
+			</headPosPerRotation>
+		</race>
 		<tools>
 			<li>
 				<label>head claw</label>
@@ -362,37 +442,6 @@
 				<chanceFactor>0.2</chanceFactor>
 			</li>
 		</tools>
-		<race>
-			<body>BeetleLikeWithClaw</body>
-			<baseHungerRate>0.025</baseHungerRate>
-			<baseBodySize>0.8</baseBodySize>
-			<baseHealthScale>1.7</baseHealthScale>
-			<gestationPeriodDays>12</gestationPeriodDays>
-			<useMeatFrom>Megaspider</useMeatFrom>
-			<wildness>0.95</wildness>
-			<lifeExpectancy>6</lifeExpectancy>
-			<lifeStageAges>
-				<li>
-					<def>EusocialInsectLarva</def>
-					<minAge>0</minAge>
-				</li>
-				<li>
-					<def>EusocialInsectJuvenile</def>
-					<minAge>0.03</minAge>
-				</li>
-				<li>
-					<def>EusocialInsectAdult</def>
-					<minAge>0.2</minAge>
-					<soundWounded>Pawn_Spelopede_Pain</soundWounded>
-					<soundDeath>Pawn_Spelopede_Death</soundDeath>
-					<soundCall>Pawn_Spelopede_Call</soundCall>
-					<soundAngry>Pawn_Spelopede_Angry</soundAngry>
-				</li>
-			</lifeStageAges>
-			<soundMeleeHitPawn>Pawn_Melee_SmallScratch_HitPawn</soundMeleeHitPawn>
-			<soundMeleeHitBuilding>Pawn_Melee_SmallScratch_HitBuilding</soundMeleeHitBuilding>
-			<soundMeleeMiss>Pawn_Melee_SmallScratch_Miss</soundMeleeMiss>
-		</race>
 		<tradeTags>
 			<li>AnimalInsectSpace</li>
 			<li>AnimalInsect</li>
@@ -408,12 +457,12 @@
 		<lifeStages>
 			<li>
 				<bodyGraphicData>
-					<texPath>Things/Pawn/KillerSpaceBug_Medium</texPath>
+					<texPath>Things/Pawn/KillerSpaceBug_small</texPath>
 					<drawSize>1</drawSize>
 					<color>(156,148,125)</color>
 				</bodyGraphicData>
 				<dessicatedBodyGraphicData>
-					<texPath>Things/Pawn/Animal/Spelopede/Dessicated_Spelopede</texPath>
+					<texPath>Things/Pawn/Dessicated_KillerSpaceBug_small</texPath>
 					<drawSize>1</drawSize>
 				</dessicatedBodyGraphicData>
 			</li>
@@ -424,7 +473,7 @@
 					<color>(156,148,125)</color>
 				</bodyGraphicData>
 				<dessicatedBodyGraphicData>
-					<texPath>Things/Pawn/Animal/Spelopede/Dessicated_Spelopede</texPath>
+					<texPath>Things/Pawn/Dessicated_KillerSpaceBug_Medium</texPath>
 					<drawSize>1.25</drawSize>
 				</dessicatedBodyGraphicData>
 			</li>
@@ -439,46 +488,23 @@
 					</shadowData>
 				</bodyGraphicData>
 				<dessicatedBodyGraphicData>
-					<texPath>Things/Pawn/Animal/Spelopede/Dessicated_Spelopede</texPath>
+					<texPath>Things/Pawn/Dessicated_KillerSpaceBug_Medium</texPath>
 					<drawSize>1.65</drawSize>
 				</dessicatedBodyGraphicData>
 			</li>
 		</lifeStages>
 	</PawnKindDef>
-	<!-- ====================================================== -->
-	<ThingDef ParentName="BaseInsectSpace">
+	<!-- Cosmopillar -->
+	<ThingDef ParentName="SpaceInsectThingBase">
 		<defName>Cosmopillar</defName>
 		<label>cosmopillar</label>
 		<description>This tremendous grub holds the dubious honor of "most disgusting creature in space." Chewing through solid stone and leaving a tunnel lubricated by its own slime, the cosmopillar was originally engineered as the vanguard of a hive of asteroid-mining insects. The project has long since been abandoned, but all throughout the Rim, asteroid miners live in fear of hungry cosmopillars.\n\nRumors persist that the oldest cosmopillars enter a deep hibernation at the center of asteroids, where their unstable genetics cause them to pupate into something even more terrible...</description>
 		<statBases>
 			<MoveSpeed>3.60</MoveSpeed>
 			<MarketValue>500</MarketValue>
-			<LeatherAmount>0</LeatherAmount>
 			<ArmorRating_Blunt>0.18</ArmorRating_Blunt>
 			<ArmorRating_Sharp>0.27</ArmorRating_Sharp>
 		</statBases>
-		<tools>
-			<li>
-				<label>head claw</label>
-				<capacities>
-					<li>Cut</li>
-				</capacities>
-				<power>12</power>
-				<cooldownTime>2.6</cooldownTime>
-				<linkedBodyPartsGroup>HeadClaw</linkedBodyPartsGroup>
-			</li>
-			<li>
-				<label>head</label>
-				<capacities>
-					<li>Blunt</li>
-				</capacities>
-				<power>7</power>
-				<cooldownTime>2</cooldownTime>
-				<linkedBodyPartsGroup>HeadAttackTool</linkedBodyPartsGroup>
-				<ensureLinkedBodyPartsGroupAlwaysUsable>true</ensureLinkedBodyPartsGroupAlwaysUsable>
-				<chanceFactor>0.2</chanceFactor>
-			</li>
-		</tools>
 		<race>
 			<body>BeetleLikeWithClaw</body>
 			<baseHungerRate>0.035</baseHungerRate>
@@ -514,6 +540,28 @@
 			<li>AnimalInsectSpace</li>
 			<li>AnimalInsect</li>
 		</tradeTags>
+		<tools>
+			<li>
+				<label>head claw</label>
+				<capacities>
+					<li>Cut</li>
+				</capacities>
+				<power>12</power>
+				<cooldownTime>2.6</cooldownTime>
+				<linkedBodyPartsGroup>HeadClaw</linkedBodyPartsGroup>
+			</li>
+			<li>
+				<label>head</label>
+				<capacities>
+					<li>Blunt</li>
+				</capacities>
+				<power>7</power>
+				<cooldownTime>2</cooldownTime>
+				<linkedBodyPartsGroup>HeadAttackTool</linkedBodyPartsGroup>
+				<ensureLinkedBodyPartsGroupAlwaysUsable>true</ensureLinkedBodyPartsGroupAlwaysUsable>
+				<chanceFactor>0.2</chanceFactor>
+			</li>
+		</tools>
 	</ThingDef>
 	<PawnKindDef ParentName="AnimalKindBase">
 		<defName>Cosmopillar</defName>
@@ -525,23 +573,23 @@
 		<lifeStages>
 			<li>
 				<bodyGraphicData>
-					<texPath>Things/Pawn/KillerSpaceBug</texPath>
+					<texPath>Things/Pawn/KillerSpaceBug_small</texPath>
 					<drawSize>1.2</drawSize>
 					<color>(154,125,94)</color>
 				</bodyGraphicData>
 				<dessicatedBodyGraphicData>
-					<texPath>Things/Pawn/Animal/Megaspider/Dessicated_Megaspider</texPath>
+					<texPath>Things/Pawn/Dessicated_KillerSpaceBug_small</texPath>
 					<drawSize>1.2</drawSize>
 				</dessicatedBodyGraphicData>
 			</li>
 			<li>
 				<bodyGraphicData>
-					<texPath>Things/Pawn/KillerSpaceBug</texPath>
+					<texPath>Things/Pawn/KillerSpaceBug_Medium</texPath>
 					<drawSize>1.6</drawSize>
 					<color>(154,125,94)</color>
 				</bodyGraphicData>
 				<dessicatedBodyGraphicData>
-					<texPath>Things/Pawn/Animal/Megaspider/Dessicated_Megaspider</texPath>
+					<texPath>Things/Pawn/Dessicated_KillerSpaceBug_Medium</texPath>
 					<drawSize>1.6</drawSize>
 				</dessicatedBodyGraphicData>
 			</li>
@@ -556,18 +604,44 @@
 					</shadowData>
 				</bodyGraphicData>
 				<dessicatedBodyGraphicData>
-					<texPath>Things/Pawn/Animal/Megaspider/Dessicated_Megaspider</texPath>
+					<texPath>Things/Pawn/Dessicated_KillerSpaceBug</texPath>
 					<drawSize>2.5</drawSize>
 				</dessicatedBodyGraphicData>
 			</li>
 		</lifeStages>
 	</PawnKindDef>
-	<ThingDef ParentName="BasePawn">
+
+	<PawnKindDef>
+		<defName>SoSHologram</defName>
+		<label>machine persona</label>
+		<backstoryCategories>
+			<li>SoSHologram</li>
+		</backstoryCategories>
+		<race>Human</race>
+		<combatPower>30</combatPower>
+		<isFighter>false</isFighter>
+		<defaultFactionType>Ancients</defaultFactionType>
+		<chemicalAddictionChance>0</chemicalAddictionChance>
+		<weaponMoney>
+			<min>0</min>
+			<max>0</max>
+		</weaponMoney>
+		<apparelMoney>
+			<min>0</min>
+			<max>0</max>
+		</apparelMoney>
+		<techHediffsChance>0</techHediffsChance>
+		<combatEnhancingDrugsChance>0</combatEnhancingDrugsChance>
+		<initialWillRange>999~999</initialWillRange>
+		<initialResistanceRange>999~999</initialResistanceRange>
+	</PawnKindDef>
+	<!--obsolete-->
+	<!--ThingDef ParentName="BasePawn">
 		<defName>SoSHologramRace</defName>
 		<label>Deprecated - do not use</label>
 		<description>Obsolete hologram race from earlier versions of Save Our Ship 2. If you're still seeing this after game load, please report a bug.</description>
 		<comps>
-			<li Class="CompProperties_HologramRemover"/>
+			<li Class="CompProperties_HologramRemover" />
 		</comps>
 		<statBases>
 			<MarketValue>0</MarketValue>
@@ -686,34 +760,9 @@
 					<li>(100,0)</li>
 				</points>
 			</ageGenerationCurve>
-			<hediffGiverSets>
-      </hediffGiverSets>
+			<hediffGiverSets />
 		</race>
 		<butcherProducts>
 		</butcherProducts>
-	</ThingDef>
-	<PawnKindDef>
-		<defName>SoSHologram</defName>
-		<label>machine persona</label>
-		<backstoryCategories>
-			<li>SoSHologram</li>
-		</backstoryCategories>
-		<race>Human</race>
-		<combatPower>30</combatPower>
-		<isFighter>false</isFighter>
-		<defaultFactionType>Ancients</defaultFactionType>
-		<chemicalAddictionChance>0</chemicalAddictionChance>
-		<weaponMoney>
-			<min>0</min>
-			<max>0</max>
-		</weaponMoney>
-		<apparelMoney>
-			<min>0</min>
-			<max>0</max>
-		</apparelMoney>
-		<techHediffsChance>0</techHediffsChance>
-		<combatEnhancingDrugsChance>0</combatEnhancingDrugsChance>
-		<initialWillRange>999~999</initialWillRange>
-		<initialResistanceRange>999~999</initialResistanceRange>
-	</PawnKindDef>
+	</ThingDef-->
 </Defs>

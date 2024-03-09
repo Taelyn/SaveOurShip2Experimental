@@ -29,13 +29,16 @@ namespace RimWorld
 
         static FieldInfo mapField = typeof(TravelingTransportPods).GetField("initialTile", BindingFlags.Instance | BindingFlags.NonPublic);
 
-        public bool IsShip => this.def == ResourceBank.WorldObjectDefOf.ShipEnemy || this.def == ResourceBank.WorldObjectDefOf.WreckSpace;
+        ShipHeatMapComp mapComp => Map.GetComponent<ShipHeatMapComp>();
 
+        public bool IsShip => def == ResourceBank.WorldObjectDefOf.ShipEnemy || def == ResourceBank.WorldObjectDefOf.WreckSpace;
+
+        public Vector3 drawPos;
         public override Vector3 DrawPos
         {
             get
             {
-                if(radius==0)
+                if (radius == 0)
                 {
                     radius = 150f;
                     theta = -3;
@@ -43,18 +46,41 @@ namespace RimWorld
                 return Vector3.SlerpUnclamped(orbitVec * radius, orbitVec * radius * -1, theta * -1); //TODO phi
             }
         }
+        private string nameInt;
+        public string Name
+        {
+            get
+            {
+                return this.nameInt;
+            }
+            set
+            {
+                this.nameInt = value;
+            }
+        }
+        public override string Label
+        {
+            get
+            {
+                if (this.nameInt == null)
+                {
+                    return base.Label;
+                }
+                return this.nameInt;
+            }
+        }
 
         public override void Tick()
 		{
 			base.Tick();
             //move ship to next pos if player owned, on raretick, not in combat or encounter or durring shuttle use
-            if (startMove && Find.TickManager.TicksGame % 60 == 0 && this.def.canBePlayerHome && !this.Map.GetComponent<ShipHeatMapComp>().InCombat)
+            if (startMove && Find.TickManager.TicksGame % 60 == 0 && def.canBePlayerHome && !mapComp.InCombat)
             {
                 preventMove = false;
                 foreach (TravelingTransportPods obj in Find.WorldObjects.TravelingTransportPods)
                 {
                     int initialTile = (int)mapField.GetValue(obj);
-                    if (initialTile == this.Tile || obj.destinationTile == this.Tile)
+                    if (initialTile == Tile || obj.destinationTile == Tile)
                     {
                         preventMove = true;
                         break;
@@ -84,6 +110,7 @@ namespace RimWorld
             Scribe_Values.Look<float>(ref radius, "radius", 0f, false);
             Scribe_Values.Look<float>(ref thetaset, "thetaset", -3, false);
             Scribe_Values.Look<bool>(ref startMove, "startMove", false, false);
+            Scribe_Values.Look<string>(ref this.nameInt, "nameInt", null, false);
         }
 
         public override void Print(LayerSubMesh subMesh)
@@ -100,7 +127,6 @@ namespace RimWorld
             }
             if (this.HasMap)
             {
-                var mapComp = this.Map.GetComponent<ShipHeatMapComp>();
                 yield return new Command_Action
                 {
                     defaultLabel = TranslatorFormattedStringExtensions.Translate("CommandShowMap"),
@@ -238,7 +264,7 @@ namespace RimWorld
                         };
                     }
                 }
-                if (mapComp.IsGraveyard && !mapComp.ShipCombatOriginMap.GetComponent<ShipHeatMapComp>().InCombat && !mapComp.BurnUpSet)
+                if (mapComp.IsGraveyard && !mapComp.IsGraveOriginInCombat && !mapComp.BurnUpSet)
                 {
                     yield return new Command_Action
                     {
@@ -252,7 +278,7 @@ namespace RimWorld
                         icon = ContentFinder<Texture2D>.Get("UI/ShipAbandon_Icon", true)
                     };
                 }
-                if (Prefs.DevMode && !mapComp.InCombat && IsShip && !mapComp.BurnUpSet)
+                if (Prefs.DevMode && !mapComp.BurnUpSet)
                 {
                     yield return new Command_Action
                     {
@@ -269,16 +295,14 @@ namespace RimWorld
 
         void Abandon(WorldObjectOrbitingShip ship)
         {
-            var mapComp = this.Map.GetComponent<ShipHeatMapComp>();
             if (mapComp.InCombat)
-                mapComp.EndBattle(this.Map, false);
-            if (this.Map.mapPawns.AnyColonistSpawned)
+                mapComp.EndBattle(Map, false);
+            if (Map.mapPawns.AnyColonistSpawned)
             {
                 Find.GameEnder.CheckOrUpdateGameOver();
             }
-            Current.Game.DeinitAndRemoveMap_NewTemp(this.Map, false);
-            this.Destroy();
-            //this.Map.GetComponent<ShipHeatMapComp>().BurnUpSet = true;
+            Current.Game.DeinitAndRemoveMap_NewTemp(Map, false);
+            Destroy();
         }
 
         public override MapGeneratorDef MapGeneratorDef
@@ -302,10 +326,10 @@ namespace RimWorld
 
         public override bool ShouldRemoveMapNow(out bool alsoRemoveWorldObject)
         {
-            var mapcomp = Map.GetComponent<ShipHeatMapComp>();
-            if (!mapcomp.InCombat && mapcomp.BurnUpSet)
+            if (mapComp.BurnUpSet)
             {
-                foreach(TravelingTransportPods obj in Find.WorldObjects.TravelingTransportPods)
+                //td recheck all of this after VF, generally pods need origin to exist till they land
+                foreach (TravelingTransportPods obj in Find.WorldObjects.TravelingTransportPods)
                 {
                     int initialTile = (int)Traverse.Create(obj).Field("initialTile").GetValue();
                     if (initialTile == this.Tile) //dont remove if pods in flight from this WO

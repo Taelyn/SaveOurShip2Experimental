@@ -124,11 +124,12 @@
 				<isHull>true</isHull>
 				<hermetic>true</hermetic>
 				<roof>true</roof>
-				<canLight>true</canLight>
+			</li>
+			<!--li Class="CompProperties_SoShipLight">
 				<light>Ship_Beam_Light</light>
 				<lightPower>15</lightPower>
 				<sunLightPower>2500</sunLightPower>
-			</li>
+			</li-->
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTransmitter</compClass>
 				<transmitsPower>true</transmitsPower>
@@ -353,7 +354,7 @@
 		<defName>ShipInside_SolarGenerator</defName>
 		<label>solar generator</label>
 		<designatorDropdown>Ship_SolarGenerators</designatorDropdown>
-		<description>Produces electricity from sunlight. Does not work in the dark or under artificial light.</description>
+		<description>Produces electricity from sunlight. Up to 600W in space and 300W on planet surface. Does not work in the dark or under artificial light.</description>
 		<thingClass>Building</thingClass>
 		<drawerType>MapMeshAndRealTime</drawerType>
 		<graphicData>
@@ -492,10 +493,6 @@
 				<isHull>true</isHull>
 				<hermetic>true</hermetic>
 				<roof>true</roof>
-				<canLight>true</canLight>
-				<light>Ship_Beam_Light</light>
-				<lightPower>15</lightPower>
-				<sunLightPower>2500</sunLightPower>
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTrader</compClass>
@@ -634,7 +631,7 @@
 		<defName>ShipAirlockBeam</defName>
 		<label>docking clamp</label>
 		<designatorDropdown>Ship_Airlocks</designatorDropdown>
-		<description>One half of a system for attaching spacecraft. Place two of these directly adjacent to a vacuum-facing airlock facing the same way. The airlock will gain the ability to extend a docking tube up to 3 tiles long. No special equipment is necessary on the other end; simply line the tube up with the other ship's airlock. You can also connect it to other airlocks.\n\nThe tube is not rated for combat maneuvers, interplanetary travel and atmospheric re-entry so ships will automatically decouple.</description>
+		<description>One half of a system for attaching spacecraft. Place two of these directly adjacent to a vacuum-facing airlock facing the same way. The airlock will gain the ability to extend a docking tube up to 3 tiles long. No special equipment is necessary on the other end; simply line the tube up with the other ship's airlock. You can also connect it to other airlocks.\n\nThe tube is not rated for interplanetary travel or atmospheric re-entry so ships will automatically decouple.</description>
 		<thingClass>Building</thingClass>
 		<drawerType>MapMeshAndRealTime</drawerType>
 		<graphicData>
@@ -805,7 +802,6 @@
 		<description>Support structure for attaching buildings and turrets to a ship's exterior. Anything built atop this will be considered part of the ship.\n\nIntegrated nano-composite armor reduces damage to turrets placed atop this hardpoint by half.</description>
 		<comps>
 			<li Class="CompProperties_SoShipPart">
-				<isPlating>true</isPlating>
 				<isHardpoint>true</isHardpoint>
 			</li>
 			<li>
@@ -813,7 +809,7 @@
 			</li>
 		</comps>
 		<placeWorkers>
-			<li>PlaceWorker_ShipHull</li>
+			<li>PlaceWorker_ShipPlating</li>
 		</placeWorkers>
 		<rotatable>false</rotatable>
 		<soundImpactDefault>BulletImpact_Metal</soundImpactDefault>
@@ -909,6 +905,7 @@
 			<graphicClass>Graphic_Multi</graphicClass>
 			<drawSize>(8,5.5)</drawSize>
 		</graphicData>
+		<altitudeLayer>BuildingOnTop</altitudeLayer>
 		<researchPrerequisites>
 			<li>ShipEngine</li>
 		</researchPrerequisites>
@@ -928,6 +925,7 @@
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTrader</compClass>
+				<basePowerConsumption>10</basePowerConsumption>
 				<transmitsPower>true</transmitsPower>
 			</li>
 			<li Class="CompProperties_Flickable"/>
@@ -940,7 +938,7 @@
 					</thingDefs>
 				</fuelFilter>
 				<consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed>
-				<autoRefuelPercent>1</autoRefuelPercent>
+				<autoRefuelPercent>0.9</autoRefuelPercent>
 				<showFuelGizmo>false</showFuelGizmo>
 				<drawOutOfFuelOverlay>false</drawOutOfFuelOverlay>
 				<drawFuelGaugeInMap>false</drawFuelGaugeInMap>
@@ -955,7 +953,9 @@
 				<thrust>1</thrust>
 				<fuelUse>1</fuelUse>
 				<takeOff>true</takeOff>
+				<soundWorking>ShipEngineFuel</soundWorking>
 			</li>
+			<li Class="Rimefeller.CompProperties_Pipe" MayRequire="Dubwise.Rimefeller" />
 		</comps>
 		<placeWorkers>
 			<li>PlaceWorker_ShipEngine</li>
@@ -980,6 +980,7 @@
 			<graphicClass>Graphic_Multi</graphicClass>
 			<drawSize>(6,5.5)</drawSize>
 		</graphicData>
+		<altitudeLayer>BuildingOnTop</altitudeLayer>
 		<researchPrerequisites>
 			<li>ShipEngine</li>
 		</researchPrerequisites>
@@ -999,6 +1000,7 @@
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTrader</compClass>
+				<basePowerConsumption>30</basePowerConsumption>
 				<transmitsPower>true</transmitsPower>
 			</li>
 			<li Class="CompProperties_Flickable"/>
@@ -1011,7 +1013,7 @@
 					</thingDefs>
 				</fuelFilter>
 				<consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed>
-				<autoRefuelPercent>1</autoRefuelPercent>
+				<autoRefuelPercent>0.9</autoRefuelPercent>
 				<showFuelGizmo>false</showFuelGizmo>
 				<drawOutOfFuelOverlay>false</drawOutOfFuelOverlay>
 				<drawFuelGaugeInMap>false</drawFuelGaugeInMap>
@@ -1026,7 +1028,9 @@
 				<thrust>2</thrust>
 				<fuelUse>2</fuelUse>
 				<takeOff>true</takeOff>
+				<soundWorking>ShipEngineFuel</soundWorking>
 			</li>
+			<li Class="Rimefeller.CompProperties_Pipe" MayRequire="Dubwise.Rimefeller" />
 		</comps>
 		<placeWorkers>
 			<li>PlaceWorker_ShipEngine</li>
@@ -1052,6 +1056,7 @@
 			<graphicClass>Graphic_Multi</graphicClass>
 			<drawSize>(5,7)</drawSize>
 		</graphicData>
+		<altitudeLayer>BuildingOnTop</altitudeLayer>
 		<researchPrerequisites>
 			<li>ShipEngine</li>
 			<li>ShipReactor</li>
@@ -1062,7 +1067,7 @@
 			<Flammability>0</Flammability>
 		</statBases>
 		<tickerType>Normal</tickerType>
-		<description>A nuclear-powered engine capable of launching a ship into orbit at. Will cause pollution. Not suitable for interplanetary travel.\n\nThrust: 3000\nFuel use: 3 fuel pods/s\nMax takeoff strength: 4000</description>
+		<description>A nuclear-powered engine capable of launching a ship into orbit. Will cause pollution. Not suitable for interplanetary travel.\n\nThrust: 3000\nFuel use: 3 fuel pods/s\nMax takeoff strength: 4000</description>
 		<size>(5,5)</size>
 		<receivesSignals>true</receivesSignals>
 		<designationCategory>Ship</designationCategory>
@@ -1072,6 +1077,7 @@
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTrader</compClass>
+				<basePowerConsumption>100</basePowerConsumption>
 				<transmitsPower>true</transmitsPower>
 			</li>
 			<li Class="CompProperties_Flickable"/>
@@ -1084,7 +1090,7 @@
 					</thingDefs>
 				</fuelFilter>
 				<consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed>
-				<autoRefuelPercent>1</autoRefuelPercent>
+				<autoRefuelPercent>0.9</autoRefuelPercent>
 				<showFuelGizmo>false</showFuelGizmo>
 				<drawOutOfFuelOverlay>false</drawOutOfFuelOverlay>
 				<drawFuelGaugeInMap>false</drawFuelGaugeInMap>
@@ -1099,6 +1105,7 @@
 				<thrust>6</thrust>
 				<fuelUse>3</fuelUse>
 				<takeOff>true</takeOff>
+				<soundWorking>ShipEngineFuel</soundWorking>
 			</li>
 		</comps>
 		<placeWorkers>
@@ -1125,10 +1132,10 @@
 			<graphicClass>Graphic_Multi</graphicClass>
 			<drawSize>(2.3,2.3)</drawSize>
 		</graphicData>
+		<altitudeLayer>BuildingOnTop</altitudeLayer>
 		<researchPrerequisites>
 			<li>ShipEngine</li>
 		</researchPrerequisites>
-		<altitudeLayer>WorldClipper</altitudeLayer>
 		<statBases>
 			<WorkToBuild>2000</WorkToBuild>
 			<MaxHitPoints>300</MaxHitPoints>
@@ -1184,7 +1191,7 @@
 			<Flammability>0</Flammability>
 		</statBases>
 		<tickerType>Normal</tickerType>
-		<description>An advanced reactionless engine capable of interplanetary and interstellar travel.\n\nCannot be used inside a planets' athmopshere.\n\nThrust: 500</description>
+		<description>An advanced reactionless engine capable of interplanetary and interstellar travel.\n\nCannot be used inside a planet's atmosphere.\n\nJT mass limit: 10000\nThrust: 500</description>
 		<size>(3,3)</size>
 		<receivesSignals>true</receivesSignals>
 		<designationCategory>Ship</designationCategory>
@@ -1244,7 +1251,7 @@
 			<Flammability>0</Flammability>
 		</statBases>
 		<tickerType>Normal</tickerType>
-		<description>An advanced reactionless engine capable of interplanetary and interstellar travel.\n\nCannot be used inside a planets' athmopshere. This larger version usually found on big warships using two manifolds in a more efficient configuration.\n\nThrust: 1500</description>
+		<description>An advanced reactionless engine capable of interplanetary and interstellar travel.\n\nCannot be used inside a planet's atmosphere. This larger version usually found on big warships using two manifolds in a more efficient configuration.\n\nJT mass limit: 30000\nThrust: 2000</description>
 		<size>(5,5)</size>
 		<receivesSignals>true</receivesSignals>
 		<designationCategory>Ship</designationCategory>
@@ -1265,7 +1272,7 @@
 					<drawSize>(11,26.5)</drawSize>
 				</graphicData-->
 				<energy>true</energy>
-				<thrust>3</thrust>
+				<thrust>4</thrust>
 			</li>
 		</comps>
 		<placeWorkers>
@@ -1790,6 +1797,11 @@
 				<efficiency>0.95</efficiency>
 				<transmitsPower>true</transmitsPower>
 			</li>
+			<li Class="RT_Fuse.CompProperties_RTFuse" MayRequire="ratys.rtfuse">
+				<compClass>RT_Fuse.CompRTFuse</compClass>
+				<surgeMitigation>1000</surgeMitigation>
+				<breakdownOnTrip>false</breakdownOnTrip>
+			</li>
 		</comps>
 		<terrainAffordanceNeeded>Light</terrainAffordanceNeeded>
 		<designationCategory>Ship</designationCategory>
@@ -1843,6 +1855,11 @@
 				<storedEnergyMax>10000</storedEnergyMax>
 				<efficiency>0.95</efficiency>
 				<transmitsPower>true</transmitsPower>
+			</li>
+			<li Class="RT_Fuse.CompProperties_RTFuse" MayRequire="ratys.rtfuse">
+				<compClass>RT_Fuse.CompRTFuse</compClass>
+				<surgeMitigation>10000</surgeMitigation>
+				<breakdownOnTrip>false</breakdownOnTrip>
 			</li>
 		</comps>
 		<terrainAffordanceNeeded>Light</terrainAffordanceNeeded>
@@ -1919,6 +1936,7 @@
 						<li>ShuttleFuelPods</li>
 					</thingDefs>
 				</fuelFilter>
+				<autoRefuelPercent>0.9</autoRefuelPercent>
 				<showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
 			</li>
 			<li Class="CompProperties_ShipHeat">
@@ -2008,6 +2026,7 @@
 						<li>ShuttleFuelPods</li>
 					</thingDefs>
 				</fuelFilter>
+				<autoRefuelPercent>0.9</autoRefuelPercent>
 				<showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
 			</li>
 			<li Class="CompProperties_ShipHeat">
@@ -2083,6 +2102,7 @@
 			<li Class="CompProperties_SoShipPart"/>
 		</comps>
 		<placeWorkers>
+			<li>PlaceWorker_ShipBay</li>
 			<li>PlaceWorker_OnShipHull</li>
 		</placeWorkers>
 		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
@@ -2131,6 +2151,7 @@
 			<li Class="CompProperties_SoShipPart"/>
 		</comps>
 		<placeWorkers>
+			<li>PlaceWorker_ShipBay</li>
 			<li>PlaceWorker_OnShipHull</li>
 		</placeWorkers>
 		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
@@ -2161,7 +2182,7 @@
 			<MaxHitPoints>500</MaxHitPoints>
 			<Flammability>0</Flammability>
 		</statBases>
-		<description>Moves enemy ship wrecks to your map. More bays are required for larger ships. Can also move and get rid of unwanted wrecks.\n\nWeight limit: 5000</description>
+		<description>Moves wrecks to your map or removes unwanted ones. More bays are required to move larger ships.\n\nWeight limit: 5000</description>
 		<size>(5,5)</size>
 		<designationCategory>Ship</designationCategory>
 		<rotatable>false</rotatable>
@@ -2178,74 +2199,69 @@
 			<li Class="CompProperties_SalvageBay"/>
 		</comps>
 		<placeWorkers>
+			<li>PlaceWorker_ShipBay</li>
 			<li>PlaceWorker_OnShipHull</li>
+		</placeWorkers>
+		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
+		<staticSunShadowHeight>1.0</staticSunShadowHeight>
+	</ThingDef>
+	<ThingDef ParentName="BuildingBase">
+		<defName>ShipSalvageBayNano</defName>
+		<label>glittertech salvage bay</label>
+		<graphicData>
+			<texPath>Things/Building/Ship/SalvageBayNano</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+			<drawSize>(5,5.6)</drawSize>
+			<damageData>
+				<cornerTL>Damage/Corner</cornerTL>
+				<cornerTR>Damage/Corner</cornerTR>
+				<cornerBL>Damage/Corner</cornerBL>
+				<cornerBR>Damage/Corner</cornerBR>
+			</damageData>
+		</graphicData>
+		<researchPrerequisites>
+			<li>ShipSalvageBayGlitter</li>
+		</researchPrerequisites>
+		<altitudeLayer>DoorMoveable</altitudeLayer>
+		<passability>Standable</passability>
+		<fillPercent>0.1</fillPercent>
+		<statBases>
+			<WorkToBuild>5000</WorkToBuild>
+			<MaxHitPoints>500</MaxHitPoints>
+			<Flammability>0</Flammability>
+		</statBases>
+		<description>Unlike the normal salvage bay this version uses a tractor beam based on a reverse JT principle. Moves wrecks to your map or removes unwanted ones. It can also retrieve small loose objects from around enemy wrecks. \n\nWeight limit: 10000</description>
+		<size>(5,5)</size>
+		<designationCategory>Ship</designationCategory>
+		<rotatable>false</rotatable>
+		<building>
+			<isEdifice>false</isEdifice>
+		</building>
+		<costList>
+			<Steel>250</Steel>
+			<Plasteel>100</Plasteel>
+			<ComponentSpacer>12</ComponentSpacer>
+			<SoSEntanglementManifold>1</SoSEntanglementManifold>
+		</costList>
+		<comps>
+			<li Class="CompProperties_SoShipPart"/>
+			<li Class="CompProperties_SalvageBay">
+				<beam>true</beam>
+				<weight>10000</weight>
+			</li>
+			<li Class="CompProperties_Power">
+				<compClass>CompPowerTrader</compClass>
+				<basePowerConsumption>2000</basePowerConsumption>
+			</li>
+		</comps>
+		<placeWorkers>
+			<li>PlaceWorker_OnShipHull</li>
+			<li>PlaceWorker_ShipBay</li>
 		</placeWorkers>
 		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
 		<staticSunShadowHeight>1.0</staticSunShadowHeight>
 	</ThingDef>
 	<!-- misc -->
-	<ThingDef ParentName="BuildingBase">
-		<defName>HullFoamDistributor</defName>
-		<label>hullfoam distributor</label>
-		<thingClass>Building</thingClass>
-		<graphicData>
-			<texPath>Things/Building/Ship/HullFoamDistributor</texPath>
-			<graphicClass>Graphic_Single</graphicClass>
-			<drawSize>(3,3)</drawSize>
-		</graphicData>
-		<researchPrerequisites>
-			<li>HullFoam</li>
-		</researchPrerequisites>
-		<altitudeLayer>Building</altitudeLayer>
-		<passability>PassThroughOnly</passability>
-		<blockWind>true</blockWind>
-		<castEdgeShadows>true</castEdgeShadows>
-		<fillPercent>0.8</fillPercent>
-		<blockLight>false</blockLight>
-		<canOverlapZones>false</canOverlapZones>
-		<statBases>
-			<WorkToBuild>4000</WorkToBuild>
-			<MaxHitPoints>1500</MaxHitPoints>
-			<Flammability>0</Flammability>
-		</statBases>
-		<tickerType>Normal</tickerType>
-		<description>A pumping station for distributing hullfoam throughout a ship. When a portion of the ship's hull is destroyed in combat, this system will automatically patch the hole with hullfoam.</description>
-		<size>(3,3)</size>
-		<designationCategory>Ship</designationCategory>
-		<comps>
-			<li Class="CompProperties_SoShipPart"/>
-			<li Class="CompProperties_Power">
-				<compClass>CompPowerTrader</compClass>
-				<basePowerConsumption>200</basePowerConsumption>
-			</li>
-			<li Class="CompProperties_Flickable"/>
-			<li Class="CompProperties_Refuelable">
-				<fuelCapacity>50.0</fuelCapacity>
-				<targetFuelLevelConfigurable>true</targetFuelLevelConfigurable>
-				<fuelFilter>
-					<thingDefs>
-						<li>HullFoam</li>
-					</thingDefs>
-				</fuelFilter>
-				<consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed>
-				<autoRefuelPercent>1</autoRefuelPercent>
-				<showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
-			</li>
-			<li Class="CompProperties_HullFoamDistributor"/>
-		</comps>
-		<rotatable>false</rotatable>
-		<placeWorkers>
-			<li>PlaceWorker_OnShipHull</li>
-		</placeWorkers>
-		<costList>
-			<Steel>80</Steel>
-			<Plasteel>40</Plasteel>
-			<ComponentSpacer>4</ComponentSpacer>
-		</costList>
-		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
-		<staticSunShadowHeight>1.0</staticSunShadowHeight>
-		<designationHotKey>Misc5</designationHotKey>
-	</ThingDef>
 	<ThingDef ParentName="BuildingBase">
 		<defName>ShipCloakingDevice</defName>
 		<label>cloaking device</label>
@@ -2273,7 +2289,7 @@
 			<MaxHitPoints>1000</MaxHitPoints>
 			<Flammability>0</Flammability>
 		</statBases>
-		<description>Generates a field which masks heat emissions, hiding your ship from passive scans. This prevents random ship battles from starting, but is not helpful once combat has already begun. It also cannot protect you from the powerful scanners used to find ships with high Notoriety.\n\nWhile the device is active, your ship's radiators will be disabled and heat capacity will decrease.</description>
+		<description>Generates a field which masks heat emissions, hiding your ship from passive scans. This prevents random ship battles from starting, but is not helpful once combat has already begun. It also cannot protect you from the powerful scanners used to find ships with high Notoriety.\n\nWhile the device is active, your ship's heat sinks will be disabled and heat capacity will decrease.</description>
 		<designationCategory>Ship</designationCategory>
 		<comps>
 			<li Class="CompProperties_Power">
@@ -2407,6 +2423,8 @@
 		  <WorkToBuild>1600</WorkToBuild>
 		  <Mass>50</Mass>
 		  <BedRestEffectiveness>1.5</BedRestEffectiveness>
+		  <DecompressionResistanceOffset>1</DecompressionResistanceOffset>
+		  <HypoxiaResistanceOffset>1</HypoxiaResistanceOffset>
 		</statBases>
 		<size>(1,1)</size>
 		<uiOrder>2022</uiOrder>
@@ -2656,6 +2674,68 @@
 	</ThingDef>
 	<!-- foam -->
 	<ThingDef ParentName="BuildingBase">
+		<defName>HullFoamDistributor</defName>
+		<label>hullfoam distributor</label>
+		<thingClass>Building</thingClass>
+		<graphicData>
+			<texPath>Things/Building/Ship/HullFoamDistributor</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+			<drawSize>(3,3)</drawSize>
+		</graphicData>
+		<researchPrerequisites>
+			<li>HullFoam</li>
+		</researchPrerequisites>
+		<altitudeLayer>Building</altitudeLayer>
+		<passability>PassThroughOnly</passability>
+		<blockWind>true</blockWind>
+		<castEdgeShadows>true</castEdgeShadows>
+		<fillPercent>0.8</fillPercent>
+		<blockLight>false</blockLight>
+		<canOverlapZones>false</canOverlapZones>
+		<statBases>
+			<WorkToBuild>4000</WorkToBuild>
+			<MaxHitPoints>1500</MaxHitPoints>
+			<Flammability>0</Flammability>
+		</statBases>
+		<tickerType>Normal</tickerType>
+		<description>A pumping station for distributing hullfoam throughout a ship. When a portion of the ship's hull is destroyed in combat, this system will automatically patch the hole with hullfoam.</description>
+		<size>(3,3)</size>
+		<designationCategory>Ship</designationCategory>
+		<comps>
+			<li Class="CompProperties_SoShipPart"/>
+			<li Class="CompProperties_Power">
+				<compClass>CompPowerTrader</compClass>
+				<basePowerConsumption>200</basePowerConsumption>
+			</li>
+			<li Class="CompProperties_Flickable"/>
+			<li Class="CompProperties_Refuelable">
+				<fuelCapacity>50.0</fuelCapacity>
+				<targetFuelLevelConfigurable>true</targetFuelLevelConfigurable>
+				<fuelFilter>
+					<thingDefs>
+						<li>HullFoam</li>
+					</thingDefs>
+				</fuelFilter>
+				<consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed>
+				<autoRefuelPercent>0.9</autoRefuelPercent>
+				<showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
+			</li>
+			<li Class="CompProperties_HullFoamDistributor"/>
+		</comps>
+		<rotatable>false</rotatable>
+		<placeWorkers>
+			<li>PlaceWorker_OnShipHull</li>
+		</placeWorkers>
+		<costList>
+			<Steel>80</Steel>
+			<Plasteel>40</Plasteel>
+			<ComponentSpacer>4</ComponentSpacer>
+		</costList>
+		<terrainAffordanceNeeded>Heavy</terrainAffordanceNeeded>
+		<staticSunShadowHeight>1.0</staticSunShadowHeight>
+		<designationHotKey>Misc5</designationHotKey>
+	</ThingDef>
+	<ThingDef ParentName="BuildingBase">
 		<defName>HullFoamWall</defName>
 		<label>hullfoam</label>
 		<description>An airtight slab of hullfoam.</description>
@@ -2828,6 +2908,7 @@
 			<li Class="CompProperties_ShipHeat">
 				<compClass>CompShipHeat</compClass>
 			</li>
+			<li Class="Rimefeller.CompProperties_Pipe" MayRequire="Dubwise.Rimefeller" />
 		</comps>
 		<resourcesFractionWhenDeconstructed>0</resourcesFractionWhenDeconstructed>
 	</ThingDef>
@@ -2860,12 +2941,10 @@
 		<leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
 		<comps>
 			<li Class="CompProperties_SoShipPart">
-				<isPlating>true</isPlating>
 				<hermetic>true</hermetic>
-				<foam>true</foam>
-				<roof>true</roof>
 			</li>
 			<li Class="CompProperties_SoShipDocking">
+				<isPlating>true</isPlating>
 			</li>
 		</comps>
 		<rotatable>false</rotatable>

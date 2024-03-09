@@ -107,11 +107,12 @@
 				<hermetic>true</hermetic>
 				<archotech>true</archotech>
 				<roof>true</roof>
-				<canLight>true</canLight>
+			</li>
+			<!--li Class="CompProperties_SoShipLight">
 				<light>Ship_Beam_Light_Archo</light>
 				<lightPower>5</lightPower>
 				<sunLightPower>1000</sunLightPower>
-			</li>
+			</li-->
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTransmitter</compClass>
 				<transmitsPower>true</transmitsPower>
@@ -320,7 +321,7 @@
 		<defName>ShipInside_SolarGeneratorArchotech</defName>
 		<label>archotech solar generator</label>
 		<designatorDropdown>Ship_SolarGenerators</designatorDropdown>
-		<description>Uses photons to entangle itself with the star's photosphere, absorbing more energy than the sunlight alone would provide. Does not work in the dark or under artificial light.</description>
+		<description>Uses photons to entangle itself with the star's photosphere, absorbing more energy than the sunlight alone would provide. Produces up to 1200W in space and 600W on planet surface. Does not work in the dark or under artificial light.</description>
 		<thingClass>Building</thingClass>
 		<drawerType>MapMeshAndRealTime</drawerType>
 		<graphicData>
@@ -618,7 +619,7 @@
 		<passability>Standable</passability>
 		<placingDraggableDimensions>2</placingDraggableDimensions>
 		<statBases>
-			<MaxHitPoints>600</MaxHitPoints>
+			<MaxHitPoints>500</MaxHitPoints>
 			<WorkToBuild>1200</WorkToBuild>
 			<Flammability>0.0</Flammability>
 			<Beauty>2</Beauty>
@@ -657,7 +658,7 @@
 		<leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
 		<designationCategory>Ship</designationCategory>
 	</ThingDef>
-	<!-- misc -->
+	<!-- engines -->
 	<ThingDef ParentName="BuildingShipBase">
 		<defName>Ship_Engine_Archotech</defName>
 		<label>antimatter thruster</label>
@@ -669,6 +670,7 @@
 			<graphicClass>Graphic_Multi</graphicClass>
 			<drawSize>(4,4)</drawSize>
 		</graphicData>
+		<altitudeLayer>BuildingOnTop</altitudeLayer>
 		<researchPrerequisites>
 			<li>ArchotechEngine</li>
 		</researchPrerequisites>
@@ -688,6 +690,7 @@
 			</li>
 			<li Class="CompProperties_Power">
 				<compClass>CompPowerTrader</compClass>
+				<basePowerConsumption>1000</basePowerConsumption>
 				<transmitsPower>true</transmitsPower>
 			</li>
 			<li Class="CompProperties_Flickable"/>
@@ -700,7 +703,7 @@
 					</thingDefs>
 				</fuelFilter>
 				<consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed>
-				<autoRefuelPercent>1</autoRefuelPercent>
+				<autoRefuelPercent>0.9</autoRefuelPercent>
 				<showFuelGizmo>false</showFuelGizmo>
 				<drawOutOfFuelOverlay>false</drawOutOfFuelOverlay>
 				<drawFuelGaugeInMap>false</drawFuelGaugeInMap>
@@ -726,6 +729,7 @@
 		</costList>
 		<designationHotKey>Misc5</designationHotKey>
 	</ThingDef>
+	<!-- power -->
 	<ThingDef ParentName="BuildingBase">
 		<defName>ArchotechAntimatterReactor</defName>
 		<label>antimatter reactor</label>
@@ -784,6 +788,7 @@
 						<li>ArchotechExoticParticles</li>
 					</thingDefs>
 				</fuelFilter>
+				<autoRefuelPercent>0.9</autoRefuelPercent>
 				<showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
 			</li>
 			<li Class="CompProperties_Glower">
@@ -815,10 +820,11 @@
 		</researchPrerequisites>
 		<constructionSkillPrerequisite>12</constructionSkillPrerequisite>
 	</ThingDef>
+	<!-- combat -->
 	<ThingDef ParentName="ShipHeatsinkBase">
 		<defName>ShipHeatsinkAntiEntropy</defName>
 		<label>anti-entropic heatbank</label>
-		<description>An advanced heatbank designed by an archotech. Uses exotic physics to convert excess heat back into usable energy. Will not replenish capacity from depletion.\n\nHeat capacity: 200Hu\nHeat conversion: 5Hu/s to 1kW/s</description>
+		<description>An advanced heatbank designed by an archotech. Uses exotic physics to convert excess heat back into usable energy. Slowly replenishes capacity from depletion even when cloaked.\n\nHeat capacity: 200Hu\nHeat conversion: 5Hu/s to 1kW/s</description>
 		<size>(2,2)</size>
 		<graphicData>
 			<texPath>Things/Building/Ship/HeatbankAntiEntropic</texPath>
@@ -1212,7 +1218,7 @@
 	<ThingDef ParentName="ShipSpinalTurretBuilding">
 		<defName>ShipSpinalBarrelPsychic</defName>
 		<label>spinal barrel: psychic flayer</label>
-		<description>The final segment of a spinal-mount cannon. Fires a beam of directed psychic trauma that stuns crew and will likely cause brain damage. Ignores hull (but not shields). Unlike other spinal weapons, the psychic flayer cannot damage your own ship.</description>
+		<description>The final segment of a spinal-mount cannon. Fires a beam of directed psychic trauma that stuns crew and will likely cause brain damage. Ignores hull (but not shields).\n\nUnlike other spinal weapons, the psychic flayer cannot damage your own ship.\nMust be connected to a bridge/tactical console with the heat network.\nRequires sufficient stored power and heat capacity to function.</description>
 		<graphicData>
 			<texPath>Things/Building/Ship/SpinalMountBarrel_Psychic</texPath>
 			<graphicClass>Graphic_Multi</graphicClass>
@@ -1356,7 +1362,7 @@
 	<ThingDef ParentName="ShipSpinalTurretBuilding">
 		<defName>ShipSpinalBarrelMechanite</defName>
 		<label>spinal barrel: disassembler</label>
-		<description>The final segment of a spinal-mount cannon. A modified railgun which launches globs of disassembler mechanites. Should be placed outside the ship, unless you want a new hole in your hull.</description>
+		<description>The final segment of a spinal-mount cannon. A modified railgun which launches globs of disassembler mechanites.\n\nShould be placed outside the ship, unless you want a new hole in your hull.\nMust be connected to a bridge/tactical console with the heat network.\nRequires sufficient stored power and heat capacity to function.</description>
 		<graphicData>
 			<texPath>Things/Building/Ship/SpinalMountBarrel_Shipeater</texPath>
 			<graphicClass>Graphic_Multi</graphicClass>

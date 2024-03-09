@@ -2,51 +2,82 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using Verse;
-using Verse.Sound;
 using SaveOurShip2;
 
 namespace RimWorld
 {
-    [StaticConstructorOnStartup]
     public class CompShipSalvageBay : ThingComp
     {
-        public static int salvageCapacity = 5000;
+        public CompProperties_SalvageBay Props
+        {
+            get
+            {
+                return (CompProperties_SalvageBay)props;
+            }
+        }
+        public int SalvageWeight => Props.weight;
         public override IEnumerable<Gizmo> CompGetGizmosExtra()
         {
-			var mapComp = this.parent.Map.GetComponent<ShipHeatMapComp>();
+			var mapComp = parent.Map.GetComponent<ShipHeatMapComp>();
 
 			foreach (Gizmo item in base.CompGetGizmosExtra())
             {
                 yield return item;
             }
-            if (parent.Faction == Faction.OfPlayer && this.parent.Map.Parent.def == ResourceBank.WorldObjectDefOf.ShipOrbiting || (Prefs.DevMode && ModLister.HasActiveModWithName("Save Our Ship Creation Kit")))
+            if (parent.Faction == Faction.OfPlayer && mapComp.IsPlayerShipMap || (Prefs.DevMode && ShipInteriorMod2.HasSoS2CK))
 			{
-				List<Map> salvagableMaps = new List<Map>();
-                foreach (Map map in Find.Maps)
+				foreach (Map map in Find.Maps.Where(m => m.GetComponent<ShipHeatMapComp>().IsGraveyard))
 				{
-					if (map.GetComponent<ShipHeatMapComp>().IsGraveyard)
-						salvagableMaps.Add(map);
-				}
-				foreach (Map map in salvagableMaps)
-				{
-                    Command_VerbTargetWreckMap retrieveShipEnemy = new Command_VerbTargetWreckMap
+                    Command_TargetWreck retrieveShipEnemy = new Command_TargetWreck
                     {
-                        salvageBay = (Building)this.parent,
-                        sourceMap = this.parent.Map,
+                        salvageBay = (Building)parent,
+                        sourceMap = parent.Map,
                         targetMap = map,
 						icon = ContentFinder<Texture2D>.Get("UI/SalvageShip"),
-						defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipSalvageCommand") + " (" + map + ")",
-						defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipSalvageCommandDesc") + map
+						defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipSalvageCommand", map.Parent.Label),
+						defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipSalvageCommandDesc", map.Parent.Label)
 					};
-					if (mapComp.InCombat)
-						retrieveShipEnemy.Disable(TranslatorFormattedStringExtensions.Translate("ShipSalvageDisabled"));
+                    if (Props.beam && (parent.TryGetComp<CompPowerTrader>()?.PowerOn ?? false))
+                    {
+                        Command_SelectShipMap beam = new Command_SelectShipMap
+                        {
+                            salvageBay = (Building)parent,
+                            sourceMap = parent.Map,
+                            targetMap = map,
+                            mode = CommandMode.scoop,
+                            defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipSalvageBeam", map.Parent.Label),
+                            defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipSalvageBeamDesc", map.Parent.Label),
+                            icon = ContentFinder<Texture2D>.Get("UI/SalvageBeam")
+                        };
+                        if (mapComp.InCombat)
+                        {
+                            beam.Disable(TranslatorFormattedStringExtensions.Translate("ShipSalvageDisabled"));
+                        }
+                        yield return beam;
+                    }
+                    Command_SelectShipMap stablizeShipEnemy = new Command_SelectShipMap
+                    {
+                        salvageBay = (Building)parent,
+                        sourceMap = parent.Map,
+                        targetMap = map,
+                        mode = CommandMode.stabilize,
+                        defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipSalvageStablize", map.Parent.Label),
+                        defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipSalvageStablizeDesc", map.Parent.Label),
+                        icon = ContentFinder<Texture2D>.Get("UI/StabilizeShip")
+                    };
+                    if (mapComp.InCombat)
+                    {
+                        retrieveShipEnemy.Disable(TranslatorFormattedStringExtensions.Translate("ShipSalvageDisabled"));
+                        stablizeShipEnemy.Disable(TranslatorFormattedStringExtensions.Translate("ShipSalvageDisabled"));
+                    }
 					yield return retrieveShipEnemy;
+                    yield return stablizeShipEnemy;
                 }
-                Command_VerbTargetWreckMap moveWreck = new Command_VerbTargetWreckMap
+                Command_TargetWreck moveWreck = new Command_TargetWreck
                 {
+                    groupable = false,
                     salvageBay = (Building)this.parent,
                     sourceMap = this.parent.Map,
                     targetMap = this.parent.Map,
@@ -54,8 +85,9 @@ namespace RimWorld
                     defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipMoveWreckCommand"),
                     defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipMoveWreckCommandDesc")
                 };
-                Command_VerbTargetWreckMap moveWreckFlip = new Command_VerbTargetWreckMap
+                Command_TargetWreck moveWreckFlip = new Command_TargetWreck
                 {
+                    groupable = false,
                     salvageBay = (Building)this.parent,
                     sourceMap = this.parent.Map,
                     targetMap = this.parent.Map,
@@ -64,8 +96,9 @@ namespace RimWorld
                     defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipMoveWreckFlipCommand"),
                     defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipMoveWreckFlipCommandDesc")
                 };
-                Command_VerbTargetWreckMap moveWreckRot = new Command_VerbTargetWreckMap
+                Command_TargetWreck moveWreckRot = new Command_TargetWreck
                 {
+                    groupable = false,
                     salvageBay = (Building)this.parent,
                     sourceMap = this.parent.Map,
                     targetMap = this.parent.Map,
@@ -84,9 +117,10 @@ namespace RimWorld
                     defaultDesc = TranslatorFormattedStringExtensions.Translate("ShipClaimWrecksCommandDesc"),
                     icon = ContentFinder<Texture2D>.Get("UI/SalvageClaim")
                 };
-                Command_VerbTargetWreck removeTargetWreck = new Command_VerbTargetWreck
+                Command_TargetShipRemove removeTargetWreck = new Command_TargetShipRemove
                 {
                     //abandon target wreck (rem rock floor)
+                    groupable = false,
                     targetMap = this.parent.Map,
                     position = this.parent.Position,
                     defaultLabel = TranslatorFormattedStringExtensions.Translate("ShipRemoveWrecksCommand"),
