@@ -98,7 +98,7 @@ namespace SaveOurShip2
 		{
 			base.GetSettings<ModSettings_SoS>();
         }
-        public const string SOS2EXPversion = "V99";
+        public const string SOS2EXPversion = "v99";
         public const int SOS2ReqCurrentMinor = 4;
         public const int SOS2ReqCurrentBuild = 3704;
 
@@ -443,8 +443,9 @@ namespace SaveOurShip2
             orbiter.SetFaction(Faction.OfPlayer);
 			orbiter.Tile = FindWorldTilePlayer();
 			Find.WorldObjects.Add(orbiter);
-			Map map = MapGenerator.GenerateMap(size, orbiter, orbiter.MapGeneratorDef);
-			map.fogGrid.ClearAllFog();
+            //Map map = MapGenerator.GenerateMap(size, orbiter, orbiter.MapGeneratorDef);
+            Map map = MapGenerator.GenerateMap(new IntVec3(400, 1, 400), orbiter, orbiter.MapGeneratorDef);
+            map.fogGrid.ClearAllFog();
 			return map;
         }
         public static Map FindPlayerShipMap()
