@@ -98,7 +98,7 @@ namespace SaveOurShip2
 		{
 			base.GetSettings<ModSettings_SoS>();
         }
-        public const string SOS2EXPversion = "v99";
+        public const string SOS2EXPversion = "V99f2";
         public const int SOS2ReqCurrentMinor = 4;
         public const int SOS2ReqCurrentBuild = 3704;
 
@@ -742,8 +742,6 @@ namespace SaveOurShip2
 					isMechs = true;
             }
 
-            Dictionary<IntVec3, Tuple<int,ColorInt,bool>> spawnLights = new Dictionary<IntVec3, Tuple<int, ColorInt, bool>>();
-
 			int size = shipDef.sizeX * shipDef.sizeZ;
 			List<Building> wreckDestroy = new List<Building>();
 			List<Pawn> pawnsOnShip = new List<Pawn>();
@@ -856,10 +854,6 @@ namespace SaveOurShip2
 						lord?.AddPawn(pawn);
 						GenSpawn.Spawn(pawn, adjPos, map);
 						pawnsOnShip.Add(pawn);
-					}
-					else if (shape.shapeOrDef == "SoSLightEnabler")
-                    {
-						spawnLights.Add(adjPos, new Tuple<int, ColorInt, bool> (shape.rot.AsInt, ColorIntUtility.AsColorInt(shape.color != Color.clear ? shape.color : Color.white), shape.alt));
 					}
 					else if (DefDatabase<ThingDef>.GetNamedSilentFail(shape.shapeOrDef) != null)
 					{
@@ -1311,7 +1305,6 @@ namespace SaveOurShip2
 					}
 				}
 			}
-			//SL SpawnLights(map, spawnLights);
         }
         private static void SoShipPawnGen(Pawn p) //td make proper pawngen req?
         {
@@ -1329,25 +1322,6 @@ namespace SaveOurShip2
                 p.ageTracker.AgeChronologicalTicks = 36000000;
             }
         }
-
-        //SL obsolete
-        /*public static void SpawnLights(Map map, Dictionary<IntVec3, Tuple<int, ColorInt, bool>> shape)
-        {
-            //Dictionary<IntVec3, Color> spawnLights
-            //shape.color != Color.clear ? shape.color : Color.white
-            foreach (IntVec3 position in shape.Keys)
-            {
-                Building edifice = position.GetEdifice(map);
-                if (edifice != null)
-                {
-                    CompSoShipLight part = edifice.TryGetComp<CompSoShipLight>();
-                    if (part != null)
-                    {
-                        part.SpawnLight(shape[position].Item1, shape[position].Item2, shape[position].Item3);
-                    }
-                }
-            }
-        }*/
         public static void PostGenerateShipDef(Map map, bool clearArea, List<IntVec3> shipArea, List<Thing> planters)
 		{
 			//HashSet<Room> validRooms = new HashSet<Room>();
